@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss
+  xmlns:a10="http://www.w3.org/2005/Atom"
+  version="2.0">
+  <channel
+    xmlns:p4="#billsSchema">
+    <title>All Bills</title>
+    <link>https://bills.parliament.uk/</link>
+    <description>A list of up to 50 of most recent bills for the current session</description>
+    <copyright>Copyright 2026, Houses of Parliament</copyright>
+    <lastBuildDate>Thu, 19 Nov 2026 17:02:55 Z</lastBuildDate>
+    <a10:id>https://bills-api.parliament.uk/Rss/AllBill</a10:id>
+    <item
+      p4:stage="2nd reading">
+      <guid
+        isPermaLink="true">https://bills.parliament.uk/bills/4334</guid>
+      <link>https://bills.parliament.uk/bills/4334</link>
+      <category>Private Members' Bill (under the Ten Minute Rule)</category>
+      <category>Commons</category>
+      <title>Park Homes Bill</title>
+      <description>A Bill to make provision about park homes.</description>
+      <a10:updated>2026-11-19T16:57:05Z</a10:updated>
+    </item>
+    <item
+      p4:stage="Report stage">
+      <guid
+        isPermaLink="true">https://bills.parliament.uk/bills/4030</guid>
+      <link>https://bills.parliament.uk/bills/4030</link>
+      <category>Government Bill</category>
+      <category>Commons</category>
+      <title>Railways Bill</title>
+      <description>A Bill to make provision about railways and railway services; and for connected purposes.</description>
+      <a10:updated>2026-11-19T16:47:56Z</a10:updated>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,42 @@
+{
+  "response": {
+    "status": "ok",
+    "userTier": "developer",
+    "total": 2,
+    "startIndex": 1,
+    "pageSize": 2,
+    "currentPage": 1,
+    "pages": 1,
+    "orderBy": "newest",
+    "results": [
+      {
+        "id": "politics/2026/nov/19/example-minister-announces-review",
+        "type": "article",
+        "sectionId": "politics",
+        "sectionName": "Politics",
+        "webPublicationDate": "2026-11-19T15:30:00Z",
+        "webTitle": "Minister announces review of review process",
+        "webUrl": "https://www.theguardian.com/politics/2026/nov/19/example-minister-announces-review",
+        "apiUrl": "https://content.guardianapis.com/politics/2026/nov/19/example-minister-announces-review",
+        "fields": {
+          "trailText": "Officials say the <strong>new</strong> review will report back &#8216;in due course&#8217;",
+          "byline": "Jane Doe Political correspondent"
+        },
+        "isHosted": false,
+        "pillarId": "pillar/news",
+        "pillarName": "News"
+      },
+      {
+        "id": "business/2026/nov/19/example-interest-rates",
+        "type": "liveblog",
+        "sectionId": "business",
+        "sectionName": "Business",
+        "webPublicationDate": "2026-11-19T09:00:00Z",
+        "webTitle": "Interest rates held – business live",
+        "webUrl": "https://www.theguardian.com/business/live/2026/nov/19/example-interest-rates",
+        "apiUrl": "https://content.guardianapis.com/business/live/2026/nov/19/example-interest-rates",
+        "isHosted": false
+      }
+    ]
+  }
+}

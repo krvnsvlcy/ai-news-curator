@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <atom:link href="https://news-api.cf.sky.com/feeds/rss/uk.xml" rel="self" type="application/rss+xml"/>
+    <title>UK News - The latest headlines from the UK | Sky News</title>
+    <link>https://news.sky.com/uk</link>
+    <image>
+      <title>UK News - The latest headlines from the UK | Sky News</title>
+      <url>https://e3.365dm.com/skynews/logo.png</url>
+      <link>https://news.sky.com/uk</link>
+    </image>
+    <description>Expert comment and analysis on the latest UK news, with headlines from England, Scotland, Northern Ireland and Wales.</description>
+    <language>en-GB</language>
+    <copyright>Copyright 2026, Sky UK. All Rights Reserved.</copyright>
+    <lastBuildDate>Thu, 19 Nov 2026 15:08:00 +0000</lastBuildDate>
+    <category>Sky News</category>
+    <ttl>1</ttl>
+    <item>
+      <title>COVID was allowed to spread with &apos;deadly speed&apos;</title>
+      <link>https://news.sky.com/story/lack-of-testing-left-government-effectively-blind-to-covid-virus-report-found-13613869</link>
+      <description>A lack of testing left the government &quot;effectively blind&quot; to COVID spreading across the UK, a report has found.</description>
+      <pubDate>Thu, 19 Nov 2026 09:41:00 +0000</pubDate>
+      <guid>https://news.sky.com/story/lack-of-testing-left-government-effectively-blind-to-covid-virus-report-found-13613869</guid>
+      <enclosure url="https://e3.365dm.com/26/11/1920x1080/skynews-covid-test_7410467.jpg?20261119130854" length="0" type="image/jpeg"/>
+      <media:description type="html">A member of NHS Track and Trace giving the thumbs up at a testing site in Hampshire. Pic: PA</media:description>
+      <media:thumbnail url="https://e3.365dm.com/26/11/1920x1080/skynews-covid-test_7410467.jpg?20261119130854" width="1920" height="1080"/>
+      <media:content type="image/jpeg" url="https://e3.365dm.com/26/11/1920x1080/skynews-covid-test_7410467.jpg?20261119130854"/>
+    </item>
+    <item>
+      <title>Police &apos;examining&apos; claims of women being trafficked by Epstein on King&apos;s Balmoral estate</title>
+      <link>https://news.sky.com/story/police-examining-claims-of-women-being-trafficked-by-epstein-on-kings-balmoral-estate-13613815</link>
+      <description>Police are &quot;examining&quot; claims of women being trafficked by Jeffrey Epstein on the King&apos;s private Scottish estate, one of Britain&apos;s top cops has confirmed to Sky News.</description>
+      <pubDate>Thu, 19 Nov 2026 15:08:00 +0000</pubDate>
+      <guid>https://news.sky.com/story/police-examining-claims-of-women-being-trafficked-by-epstein-on-kings-balmoral-estate-13613815</guid>
+      <enclosure url="https://e3.365dm.com/26/10/1920x1080/skynews-jeffrey-epstein-ghislaine-maxwell_7391718.jpg?20261119151741" length="0" type="image/jpeg"/>
+      <media:description type="html">Jeffrey Epstein and Ghislaine Maxwell at the Balmoral estate. Pic: SDNY/ZUMA Press Wire/Shutterstock</media:description>
+      <media:thumbnail url="https://e3.365dm.com/26/10/1920x1080/skynews-jeffrey-epstein-ghislaine-maxwell_7391718.jpg?20261119151741" width="1920" height="1080"/>
+      <media:content type="image/jpeg" url="https://e3.365dm.com/26/10/1920x1080/skynews-jeffrey-epstein-ghislaine-maxwell_7391718.jpg?20261119151741"/>
+    </item>
+  </channel>
+</rss>

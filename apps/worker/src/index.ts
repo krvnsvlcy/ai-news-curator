@@ -1,30 +1,78 @@
-import { curate } from "@curator/core";
-import { fetchFeed } from "./feeds.js";
+import { closeDb, seedDefaultSources } from "@curator/db";
+import { type IngestResult, ingestDueSources } from "@curator/ingest";
 
-const feedUrls = (process.env.FEED_URLS ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const TICK_MS = 60_000;
 
-async function main() {
-  if (feedUrls.length === 0) {
-    console.error("FEED_URLS is empty. Copy .env.example to .env and add feeds.");
-    process.exitCode = 1;
-    return;
-  }
+const usage = `Usage: worker <command>
 
-  const results = await Promise.allSettled(feedUrls.map((url) => fetchFeed(url)));
-  const articles = results.flatMap((r, i) => {
-    if (r.status === "fulfilled") return r.value;
-    console.warn(`Failed to fetch ${feedUrls[i]}:`, r.reason);
-    return [];
-  });
+Commands:
+  run    Keep running; fetch each enabled source when its interval elapses (default)
+  once   Fetch all due sources once, then exit
+  seed   Add the default sources (Sky News, The Guardian, GOV.UK, UK Parliament) if missing`;
 
-  const curated = curate(articles);
-  console.log(`Fetched ${articles.length} articles, kept ${curated.length}.`);
-  for (const a of curated.slice(0, 20)) {
-    console.log(`${a.score.toFixed(2)}  ${a.title}  [${a.tags.join(", ")}]`);
+function log(results: IngestResult[]) {
+  for (const r of results) {
+    if (r.status === "ok") {
+      console.log(`[ok]    ${r.source}: ${r.itemCount} items, ${r.newCount} new`);
+    } else {
+      console.warn(`[error] ${r.source}: ${r.error}`);
+    }
   }
 }
 
-await main();
+async function run() {
+  let stopping = false;
+  let timer: NodeJS.Timeout | undefined;
+  let wake: (() => void) | undefined;
+
+  const stop = () => {
+    stopping = true;
+    clearTimeout(timer);
+    wake?.();
+  };
+  process.once("SIGINT", stop);
+  process.once("SIGTERM", stop);
+
+  console.log("Worker started. Checking for due sources every minute.");
+  while (!stopping) {
+    try {
+      log(await ingestDueSources());
+    } catch (err) {
+      // Usually a database outage; keep the loop alive and retry next tick.
+      console.error("Ingestion tick failed:", err);
+    }
+    await new Promise<void>((resolve) => {
+      wake = resolve;
+      timer = setTimeout(resolve, TICK_MS);
+    });
+  }
+  console.log("Worker stopped.");
+}
+
+async function main(command = "run") {
+  switch (command) {
+    case "run":
+      return run();
+    case "once": {
+      const results = await ingestDueSources();
+      if (results.length === 0) console.log("No sources are due.");
+      log(results);
+      if (results.some((r) => r.status === "error")) process.exitCode = 1;
+      return;
+    }
+    case "seed": {
+      const added = await seedDefaultSources();
+      console.log(added.length ? `Added: ${added.join(", ")}` : "Default sources already exist.");
+      return;
+    }
+    default:
+      console.error(usage);
+      process.exitCode = 2;
+  }
+}
+
+try {
+  await main(process.argv[2]);
+} finally {
+  await closeDb();
+}

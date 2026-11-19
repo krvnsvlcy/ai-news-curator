@@ -5,18 +5,20 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
-    "start": "node --env-file-if-exists=../../.env dist/index.js",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts run",
+    "start": "node --env-file-if-exists=../../.env dist/index.js run",
+    "once": "node --env-file-if-exists=../../.env dist/index.js once",
+    "seed": "node --env-file-if-exists=../../.env dist/index.js seed",
     "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "@curator/core": "workspace:*",
-    "fast-xml-parser": "^5.12.1"
   },
   "devDependencies": {
     "@curator/tsconfig": "workspace:*",
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@curator/db": "workspace:*",
+    "@curator/ingest": "workspace:*"
   }
 }

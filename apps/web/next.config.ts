@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
-  transpilePackages: ["@curator/core"],
+  serverExternalPackages: ["mongodb"],
 };
 
 export default config;

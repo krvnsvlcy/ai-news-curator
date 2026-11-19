@@ -1,37 +1,41 @@
 @import "tailwindcss";
 
-/* Editorial palette: near-black ink on warm white, one green accent. */
+/* Internal-tool palette: neutral surfaces, one green accent for healthy states. */
 @theme {
-  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --color-paper: #ffffff;
-  --color-ink: #242424;
+  --color-canvas: #fafafa;
+  --color-sidebar: #f6f6f5;
+  --color-ink: #1f1f1f;
   --color-muted: #6b6b6b;
-  --color-rule: #f2f2f2;
-  --color-chip: #f2f2f2;
+  --color-rule: #e7e7e5;
+  --color-chip: #efefed;
+  --color-hover: #ececea;
   --color-accent: #1a8917;
 }
 
 @layer base {
   @media (prefers-color-scheme: dark) {
     :root {
-      --color-paper: #121212;
-      --color-ink: #e6e6e6;
-      --color-muted: #9a9a9a;
-      --color-rule: #262626;
-      --color-chip: #232323;
+      --color-paper: #191919;
+      --color-canvas: #121212;
+      --color-sidebar: #161616;
+      --color-ink: #e8e8e8;
+      --color-muted: #9b9b9b;
+      --color-rule: #2a2a2a;
+      --color-chip: #252525;
+      --color-hover: #222222;
       --color-accent: #4caf50;
     }
   }
 
   html {
     -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply bg-paper font-sans text-ink;
+    @apply bg-canvas font-sans text-ink;
   }
 
   ::selection {

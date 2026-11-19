@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@curator/core": "workspace:*",
+    "@curator/db": "workspace:*",
+    "@curator/ingest": "workspace:*",
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

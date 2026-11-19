@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xml:lang="en-US" xmlns="http://www.w3.org/2005/Atom">
+  <id>tag:www.gov.uk,2005:/search/news-and-communications</id>
+  <link rel="alternate" type="text/html" href="https://www.gov.uk"/>
+  <link rel="self" type="application/atom+xml" href="https://www.gov.uk/search/news-and-communications.atom"/>
+  <title>News and communications</title>
+  <updated>2026-11-19T17:15:31+00:00</updated>
+  <author>
+    <name>HM Government</name>
+  </author>
+  <entry>
+    <id>tag:www.gov.uk,2005:/government/news/new-1700-place-leicestershire-prison-moves-a-step-closer</id>
+    <updated>2026-11-19T17:15:31+00:00</updated>
+    <link rel="alternate" type="text/html" href="https://www.gov.uk/government/news/new-1700-place-leicestershire-prison-moves-a-step-closer"/>
+    <title>New 1,700-place Leicestershire prison moves a step closer</title>
+    <summary type="html">A new 1,700-place prison in Leicestershire has reached a major construction milestone this week, with final structural works now complete.</summary>
+  </entry>
+  <entry>
+    <id>tag:www.gov.uk,2005:/government/news/brothers-sentenced-for-illegal-waste-wood-fire-risk-site</id>
+    <updated>2026-11-19T17:13:33+00:00</updated>
+    <link rel="alternate" type="text/html" href="https://www.gov.uk/government/news/brothers-sentenced-for-illegal-waste-wood-fire-risk-site"/>
+    <title>Brothers sentenced for illegal waste wood fire risk site</title>
+    <summary type="html">Brothers who operated a Tyneside company that illegally stored thousands of tonnes of waste wood – posing a significant fire risk – have been sentenced.</summary>
+  </entry>
+</feed>

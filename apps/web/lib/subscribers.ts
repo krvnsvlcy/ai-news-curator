@@ -61,20 +61,3 @@ export function clearLegacySubscribers() {
     // nothing to clear
   }
 }
-
-// Remembered address for "Send test" (per-browser convenience).
-const TEST_KEY = "curator:test-email";
-export function readTestEmail(): string {
-  try {
-    return window.localStorage.getItem(TEST_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-export function rememberTestEmail(email: string) {
-  try {
-    window.localStorage.setItem(TEST_KEY, email);
-  } catch {
-    // not important
-  }
-}

@@ -95,9 +95,8 @@ export function ExternalStoryDialog({
           <textarea
             value={v.description}
             onChange={set("description")}
-            rows={2}
             maxLength={1000}
-            className={`${inputClass} mt-1 resize-y`}
+            className={`${inputClass} mt-1 h-32 resize-none`}
           />
         </label>
         {error && (

@@ -119,68 +119,67 @@ export function SubscribersManager({
         on your list.
       </p>
 
-      <Panel>
-        <div className="p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[14px] font-semibold">Add subscribers</h2>
-            <button
-              type="button"
-              onClick={() => setBulkOpen((o) => !o)}
-              aria-expanded={bulkOpen}
-              className={buttonClass("quiet")}
-            >
-              {bulkOpen ? "Add one" : "Paste a list"}
-            </button>
-          </div>
-
-          {bulkOpen ? (
-            <form onSubmit={onBulk} className="mt-3 space-y-2">
-              <textarea
-                aria-label="Email addresses"
-                value={bulk}
-                onChange={(e) => setBulk(e.target.value)}
-                rows={4}
-                placeholder="One per line, or separated by commas"
-                className={`${input} resize-y`}
-              />
-              <button
-                type="submit"
-                className={buttonClass("primary")}
-                disabled={!bulk.trim() || pending}
-              >
-                Add addresses
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={onAdd} className="mt-3 flex flex-col gap-2 sm:flex-row" noValidate>
-              <input
-                type="email"
-                aria-label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                autoComplete="off"
-                className={input}
-              />
-              <button
-                type="submit"
-                className={`${buttonClass("primary")} sm:w-28`}
-                disabled={!email.trim() || pending}
-              >
-                Add
-              </button>
-            </form>
-          )}
-          {message && (
-            <p
-              role={message.kind === "error" ? "alert" : "status"}
-              className={`mt-2 text-[12.5px] ${message.kind === "error" ? "text-red-600" : "text-sea"}`}
-            >
-              {message.text}
-            </p>
-          )}
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-[14px] font-semibold">Add subscribers</h2>
+          <button
+            type="button"
+            onClick={() => setBulkOpen((o) => !o)}
+            aria-expanded={bulkOpen}
+            className={buttonClass("quiet")}
+          >
+            {bulkOpen ? "Add one" : "Paste a list"}
+          </button>
         </div>
-      </Panel>
+
+        {bulkOpen ? (
+          <form onSubmit={onBulk} className="mt-3 space-y-2">
+            <textarea
+              aria-label="Email addresses"
+              value={bulk}
+              onChange={(e) => setBulk(e.target.value)}
+              placeholder="One per line, or separated by commas"
+              className={`${input} h-48 resize-none`}
+            />
+            <button
+              type="submit"
+              className={buttonClass("primary")}
+              disabled={!bulk.trim() || pending}
+            >
+              Add addresses
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={onAdd} className="mt-3 flex flex-col gap-2 sm:flex-row" noValidate>
+            <input
+              type="email"
+              aria-label="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="off"
+              className={input}
+            />
+            <button
+              type="submit"
+              className={`${buttonClass("primary")} sm:w-28`}
+              disabled={!email.trim() || pending}
+            >
+              Add
+            </button>
+          </form>
+        )}
+        {message && (
+          <p
+            role={message.kind === "error" ? "alert" : "status"}
+            className={`mt-2 text-[12.5px] ${message.kind === "error" ? "text-red-600" : "text-sea"}`}
+          >
+            {message.text}
+          </p>
+        )}
+      </section>
+
+      <hr className="border-rule" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[14px] font-semibold">

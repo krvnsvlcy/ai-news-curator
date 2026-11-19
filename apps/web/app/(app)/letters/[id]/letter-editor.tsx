@@ -11,8 +11,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
-import { ArrowLeftIcon, PlusIcon, SendIcon } from "@/components/icons";
+import { PlusIcon } from "@/components/icons";
 import { LetterStatusBadge } from "@/components/letter-status";
+import { PageHeader } from "@/components/page";
 import { timeAgo } from "@/lib/format";
 import {
   contentOf,
@@ -31,12 +32,12 @@ import {
   writeBriefingAction,
 } from "../actions";
 import { DeleteLetterButton } from "../delete-letter-button";
+import { publishLetterAction } from "../send-actions";
 import { AiButton, AiError, Suggestions } from "./ai-suggestions";
 import { ArticlePicker } from "./article-picker";
 import { ExternalStoryDialog } from "./external-story-dialog";
 import { inputClass, labelClass } from "./fields";
 import { LetterPreview } from "./letter-preview";
-import { SendDialog } from "./send-dialog";
 import { StoryList, toSourceStory } from "./story-list";
 
 const keyOf = (c: EditorLetterContent) => JSON.stringify(contentOf(c));
@@ -48,24 +49,43 @@ export function LetterEditor({
   publishedHtml,
   sources,
   newsletter,
+  analytics,
+  initialView = "content",
 }: {
   initial: EditorLetter;
   publishedHtml?: string;
   sources: { slug: string; name: string }[];
   newsletter: NewsletterOptions;
+  /** Rendered stats for a published letter; enables the Content / Analytics switch. */
+  analytics?: React.ReactNode;
+  initialView?: "content" | "analytics";
 }) {
   const [letter, setLetter] = useState(initial);
   const [savedKey, setSavedKey] = useState(() => keyOf(initial));
   const [banner, setBanner] = useState<Banner>();
   const [busy, startBusy] = useTransition();
+  const [saving, setSaving] = useState(false);
+  /** The content that last failed to save; not retried until it changes (or ever, on a conflict). */
+  const [saveError, setSaveError] = useState<{ key: string; conflict?: boolean }>();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [externalOpen, setExternalOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
-  const [sendOpen, setSendOpen] = useState(false);
+  const [tab, setTab] = useState<"edition" | "stories">("edition");
+  const [view, setViewState] = useState(initialView);
+  const showAnalytics = analytics !== undefined && view === "analytics";
+  function setView(v: "content" | "analytics") {
+    setViewState(v);
+    // Keep the view in the URL so it survives reloads and can be linked.
+    const url = new URL(window.location.href);
+    if (v === "analytics") url.searchParams.set("view", "analytics");
+    else url.searchParams.delete("view");
+    window.history.replaceState(null, "", url);
+  }
   const router = useRouter();
 
   const locked = letter.status === "published";
-  const dirty = !locked && keyOf(letter) !== savedKey;
+  const currentKey = keyOf(letter);
+  const dirty = !locked && currentKey !== savedKey;
   const problems = readinessProblems(letter);
   const articleIds = useMemo(
     () => new Set(letter.stories.flatMap((s) => (s.articleId ? [s.articleId] : []))),
@@ -78,11 +98,16 @@ export function LetterEditor({
   /** Saves current content. Returns the new revision, or null on failure. */
   const save = useCallback(async (): Promise<number | null> => {
     const sent = contentOf(letter);
-    const res = await saveLetterAction(letter.id, letter.revision, sent);
+    setSaving(true);
+    const res = await saveLetterAction(letter.id, letter.revision, sent).finally(() =>
+      setSaving(false),
+    );
     if (!res.ok) {
+      setSaveError({ key: keyOf(sent), conflict: res.conflict });
       setBanner({ kind: "error", text: res.error, conflict: res.conflict });
       return null;
     }
+    setSaveError(undefined);
     // Keep anything typed while the save was in flight; take server metadata.
     setLetter((l) => ({
       ...l,
@@ -91,21 +116,21 @@ export function LetterEditor({
       updatedAt: res.letter.updatedAt,
     }));
     setSavedKey(keyOf(sent));
-    setBanner(
-      res.notice ? { kind: "notice", text: res.notice } : { kind: "success", text: "Saved" },
-    );
+    if (res.notice) setBanner({ kind: "notice", text: res.notice });
+    else setBanner((b) => (b?.kind === "error" ? undefined : b));
     return res.letter.revision;
   }, [letter]);
 
-  const runSave = useCallback(() => startBusy(async () => void (await save())), [save]);
+  // Autosave shortly after edits stop. `save` changes with every edit, which
+  // restarts the timer. One save at a time; status changes save for themselves.
+  const saveBlocked = saveError?.conflict || saveError?.key === currentKey;
+  useEffect(() => {
+    if (!dirty || saving || busy || saveBlocked) return;
+    const t = setTimeout(() => void save(), 800);
+    return () => clearTimeout(t);
+  }, [dirty, saving, busy, saveBlocked, save]);
 
-  function changeStatus(to: LetterStatus) {
-    if (
-      to === "published" &&
-      !confirm("Mark this letter as published? It will be locked for editing.")
-    ) {
-      return;
-    }
+  function changeStatus(to: Exclude<LetterStatus, "published">) {
     startBusy(async () => {
       let revision: number | null = letter.revision;
       if (dirty) revision = await save();
@@ -118,22 +143,48 @@ export function LetterEditor({
       setLetter((l) => ({ ...l, ...res.letter, ...contentOf(l) }));
       setBanner({
         kind: "success",
-        text:
-          to === "ready"
-            ? "Marked ready"
-            : to === "published"
-              ? "Marked published"
-              : "Moved back to draft",
+        text: to === "ready" ? "Marked ready" : "Moved back to draft",
       });
     });
   }
 
-  // Cmd/Ctrl+S saves; warn before leaving with unsaved edits.
+  function publish() {
+    if (
+      !confirm(
+        "Publish this letter? It goes to everyone on your subscriber list and is locked for editing.",
+      )
+    ) {
+      return;
+    }
+    startBusy(async () => {
+      let revision: number | null = letter.revision;
+      if (dirty) revision = await save();
+      if (revision === null) return;
+      const res = await publishLetterAction({ id: letter.id, revision });
+      if (!res.ok) {
+        setBanner({ kind: "error", text: res.error, conflict: res.conflict });
+        return;
+      }
+      const failed = res.failed.length;
+      setLetter((l) => ({ ...l, ...res.letter, ...contentOf(l) }));
+      setBanner({
+        kind: failed ? "notice" : "success",
+        text:
+          res.delivered === 0
+            ? "Published"
+            : `Published and sent to ${res.delivered} ${res.delivered === 1 ? "subscriber" : "subscribers"}${failed ? ` · ${failed} failed` : ""}`,
+      });
+      // Reload server data so the editor shows the archived edition.
+      router.refresh();
+    });
+  }
+
+  // Cmd/Ctrl+S saves now; warn before leaving with unsaved edits.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (dirty && !busy) runSave();
+        if (dirty && !saving && !busy) void save();
       }
     };
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -145,7 +196,7 @@ export function LetterEditor({
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
-  }, [dirty, busy, runSave]);
+  }, [dirty, saving, busy, save]);
 
   useEffect(() => {
     if (banner?.kind !== "success") return;
@@ -184,37 +235,30 @@ export function LetterEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Toolbar */}
-      <header className="shrink-0">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
-          <Link
-            href="/letters"
-            className={`${buttonClass("quiet")} -ml-2 px-2`}
-            aria-label="Back to letters"
-          >
-            <ArrowLeftIcon className="size-4" />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-[15px] font-semibold">
-                {letter.headline.trim() || (
-                  <span className="text-muted italic">Untitled letter</span>
-                )}
-              </h1>
-              <LetterStatusBadge status={letter.status} />
-            </div>
-            <p className="text-[12px] text-muted">
-              {formatLetterDate(letter.date)} ·{" "}
-              {dirty ? (
-                <span className="text-amber-700">Unsaved changes</span>
-              ) : locked && letter.publishedAt ? (
-                `Published ${timeAgo(new Date(letter.publishedAt))}`
-              ) : (
-                `Saved ${timeAgo(new Date(letter.updatedAt))}`
-              )}
-            </p>
-          </div>
-
+      <PageHeader
+        title={letter.headline.trim() || <span className="text-muted italic">Untitled letter</span>}
+        description={
+          <span className="inline-flex flex-wrap items-center gap-x-1.5">
+            <Link href="/letters" className="hover:text-ink hover:underline">
+              Letters
+            </Link>
+            <span>/</span>
+            <LetterStatusBadge status={letter.status} />
+            <span>·</span>
+            <span>{formatLetterDate(letter.date)}</span>
+            <span>·</span>
+            {saveBlocked && dirty ? (
+              <span className="text-red-700">Not saved</span>
+            ) : saving || dirty ? (
+              <span>Saving…</span>
+            ) : locked && letter.publishedAt ? (
+              <span>Published {timeAgo(new Date(letter.publishedAt))}</span>
+            ) : (
+              <span>Saved {timeAgo(new Date(letter.updatedAt))}</span>
+            )}
+          </span>
+        }
+        actions={
           <div className="flex flex-wrap items-center gap-2">
             {letter.status === "draft" && (
               <DeleteLetterButton
@@ -223,19 +267,22 @@ export function LetterEditor({
                 compact
               />
             )}
-            {letter.sends.some((x) => x.kind === "subscribers") && (
-              <Link href={`/letters/${letter.id}/analytics`} className={buttonClass("quiet")}>
-                Analytics
-              </Link>
+            {analytics !== undefined && (
+              <fieldset className="flex rounded-md border border-rule p-0.5">
+                <legend className="sr-only">View</legend>
+                {(["content", "analytics"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={view === v}
+                    onClick={() => setView(v)}
+                    className="rounded-sm px-2.5 py-0.5 text-[12.5px] text-muted capitalize aria-pressed:bg-ink aria-pressed:text-paper"
+                  >
+                    {v}
+                  </button>
+                ))}
+              </fieldset>
             )}
-            <button
-              type="button"
-              onClick={() => setSendOpen(true)}
-              disabled={busy}
-              className={buttonClass("secondary")}
-            >
-              <SendIcon className="size-4" /> Send
-            </button>
             {locked ? (
               <form action={duplicateLetterAction.bind(null, letter.id)}>
                 <button type="submit" className={buttonClass("secondary")}>
@@ -244,20 +291,11 @@ export function LetterEditor({
               </form>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={runSave}
-                  disabled={!dirty || busy}
-                  className={buttonClass("secondary")}
-                >
-                  {busy && dirty ? "Saving…" : "Save"}
-                  <kbd className="hidden text-[11px] text-muted sm:inline">⌘S</kbd>
-                </button>
                 {letter.status === "draft" && (
                   <button
                     type="button"
                     onClick={() => changeStatus("ready")}
-                    disabled={busy || problems.length > 0}
+                    disabled={busy || saving || problems.length > 0}
                     title={
                       problems.length ? problems.join(" ") : "Approve this letter for publication"
                     }
@@ -271,29 +309,32 @@ export function LetterEditor({
                     <button
                       type="button"
                       onClick={() => changeStatus("draft")}
-                      disabled={busy}
+                      disabled={busy || saving}
                       className={buttonClass("secondary")}
                     >
                       Back to draft
                     </button>
                     <button
                       type="button"
-                      onClick={() => changeStatus("published")}
-                      disabled={busy || problems.length > 0}
+                      onClick={publish}
+                      disabled={busy || saving || problems.length > 0}
                       className={buttonClass("primary")}
                     >
-                      Mark published
+                      Publish
                     </button>
                   </>
                 )}
               </>
             )}
           </div>
-        </div>
+        }
+      />
+
+      <div className="shrink-0">
         {banner && (
           <div
             role={banner.kind === "error" ? "alert" : "status"}
-            className={`mx-4 mb-3 rounded-md border px-3 py-2 text-[13px] sm:mx-6 ${
+            className={`mx-4 mb-3 rounded-md border px-3 py-2 text-[13px] sm:mx-8 ${
               banner.kind === "error"
                 ? "border-red-600/20 bg-red-50 text-red-800"
                 : banner.kind === "notice"
@@ -313,7 +354,11 @@ export function LetterEditor({
             )}
           </div>
         )}
-        <div role="tablist" aria-label="View" className="flex px-4 sm:px-6 xl:hidden">
+        <div
+          role="tablist"
+          aria-label="View"
+          className={`flex px-4 sm:px-8 xl:hidden ${showAnalytics ? "hidden" : ""}`}
+        >
           {(["edit", "preview"] as const).map((v) => (
             <button
               key={v}
@@ -327,53 +372,50 @@ export function LetterEditor({
             </button>
           ))}
         </div>
-      </header>
+      </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      {showAnalytics && (
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-8 sm:px-8">{analytics}</main>
+      )}
+
+      <div
+        className={`grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] ${showAnalytics ? "hidden" : ""}`}
+      >
         {/* Editor column */}
         <div
-          className={`space-y-5 overflow-y-auto px-4 py-6 sm:px-6 ${mobileView === "edit" ? "" : "hidden xl:block"}`}
+          className={`min-h-0 px-4 py-6 sm:px-8 ${mobileView === "edit" ? "" : "hidden xl:block"}`}
         >
-          {locked && (
-            <p className="rounded-md border border-sea/25 bg-sea/10 px-3 py-2 text-[13px] text-sea">
-              This edition is published and locked so it stays exactly as sent. Duplicate it to
-              start a new draft.
-            </p>
-          )}
-          {!locked && problems.length > 0 && (
-            <div className="rounded-md border border-rule bg-paper px-3 py-2.5">
-              <p className="text-[12.5px] font-medium">Before it's ready</p>
-              <ul className="mt-1 list-inside list-disc text-[12.5px] text-muted">
-                {problems.map((p) => (
-                  <li key={p}>{p}</li>
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between gap-3 pb-3">
+              <div
+                role="tablist"
+                aria-label="Letter sections"
+                className="flex rounded-md border border-rule p-0.5"
+              >
+                {(
+                  [
+                    ["edition", "Edition"],
+                    ["stories", "Stories"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    id={`tab-${id}`}
+                    aria-controls={`panel-${id}`}
+                    aria-selected={tab === id}
+                    onClick={() => setTab(id)}
+                    className="rounded-sm px-2.5 py-0.5 text-[12.5px] text-muted aria-selected:bg-ink aria-selected:text-paper"
+                  >
+                    {label}
+                    {id === "stories" && (
+                      <span className="ml-1 tabular-nums opacity-70">{letter.stories.length}</span>
+                    )}
+                  </button>
                 ))}
-              </ul>
-            </div>
-          )}
-
-          <EditionSection letter={letter} locked={locked} onChange={update} />
-          <BriefingSection
-            letter={letter}
-            locked={locked}
-            onChange={(briefing) => update({ briefing })}
-          />
-
-          <section aria-labelledby="stories-heading">
-            <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <h2 id="stories-heading" className="text-[14px] font-semibold">
-                  Stories{" "}
-                  <span className="font-normal text-muted tabular-nums">
-                    {letter.stories.length}
-                  </span>
-                </h2>
-                {!locked && (
-                  <p className="text-[12.5px] text-muted">
-                    Drag to reorder. The first story leads the email.
-                  </p>
-                )}
               </div>
-              {!locked && (
+              {tab === "stories" && !locked && (
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -392,36 +434,79 @@ export function LetterEditor({
                 </div>
               )}
             </div>
-            {letter.stories.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-rule px-6 py-10 text-center">
-                <p className="text-[13.5px] font-medium">No stories yet</p>
-                <p className="mt-1 text-[12.5px] text-muted">
-                  Pick articles from the feed to build this edition.
+
+            <div
+              role="tabpanel"
+              id={`panel-${tab}`}
+              aria-labelledby={`tab-${tab}`}
+              className="-mx-1 min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pt-4 pb-1"
+            >
+              {locked && (
+                <p className="rounded-md border border-sea/25 bg-sea/10 px-3 py-2 text-[13px] text-sea">
+                  This edition is published and locked so it stays exactly as sent. Duplicate it to
+                  start a new draft.
                 </p>
-                {!locked && (
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpen(true)}
-                    className={`${buttonClass("secondary")} mt-3`}
-                  >
-                    Browse articles
-                  </button>
-                )}
-              </div>
-            ) : (
-              <StoryList
-                stories={letter.stories}
-                tone={letter.tone}
-                locked={locked}
-                onChange={setStories}
-              />
-            )}
-          </section>
+              )}
+              {!locked && problems.length > 0 && (
+                <div className="rounded-md border border-rule bg-paper px-3 py-2.5">
+                  <p className="text-[12.5px] font-medium">Before it's ready</p>
+                  <ul className="mt-1 list-inside list-disc text-[12.5px] text-muted">
+                    {problems.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {tab === "edition" ? (
+                <>
+                  <EditionSection letter={letter} locked={locked} onChange={update} />
+                  <div className="border-t border-rule pt-5">
+                    <BriefingSection
+                      letter={letter}
+                      locked={locked}
+                      onChange={(briefing) => update({ briefing })}
+                    />
+                  </div>
+                </>
+              ) : letter.stories.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-rule px-6 py-10 text-center">
+                  <p className="text-[13.5px] font-medium">No stories yet</p>
+                  <p className="mt-1 text-[12.5px] text-muted">
+                    Pick articles from the feed to build this edition.
+                  </p>
+                  {!locked && (
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className={`${buttonClass("secondary")} mt-3`}
+                    >
+                      Browse articles
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {!locked && (
+                    <p className="mb-2 text-[12.5px] text-muted">
+                      Drag to reorder. The first story leads the email.
+                    </p>
+                  )}
+                  <StoryList
+                    stories={letter.stories}
+                    tone={letter.tone}
+                    locked={locked}
+                    onChange={setStories}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Preview column */}
         <div
-          className={`px-4 py-6 sm:px-6 xl:pl-0 ${mobileView === "preview" ? "" : "hidden xl:block"}`}
+          className={`px-4 py-6 sm:px-8 xl:pl-0 ${mobileView === "preview" ? "" : "hidden xl:block"}`}
         >
           <div className="h-full">
             <LetterPreview
@@ -439,20 +524,6 @@ export function LetterEditor({
         sources={sources}
         selectedArticleIds={articleIds}
         onAdd={addArticle}
-      />
-      <SendDialog
-        open={sendOpen}
-        onClose={() => setSendOpen(false)}
-        letterId={letter.id}
-        status={letter.status}
-        revision={letter.revision}
-        sends={letter.sends}
-        ensureSaved={async () => (dirty ? save() : letter.revision)}
-        onSent={(send, published) => {
-          setLetter((l) => ({ ...l, sends: [...l.sends, send] }));
-          // Publishing changes status; reload server data so the editor locks and shows the archive.
-          if (published) router.refresh();
-        }}
       />
       <ExternalStoryDialog
         open={externalOpen}
@@ -473,7 +544,7 @@ function Section({
   aside?: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-rule bg-paper p-4">
+    <section>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-[14px] font-semibold">{title}</h2>
         {aside}
@@ -568,30 +639,40 @@ function EditionSection({
             <label htmlFor="letter-tone" className={labelClass}>
               Editorial tone <span className="font-normal text-muted">for AI suggestions</span>
             </label>
-            <input
-              id="letter-tone"
-              value={letter.tone}
-              onChange={(e) => onChange({ tone: e.target.value })}
-              placeholder="Dry, understated British wit"
-              maxLength={300}
-              disabled={locked}
-              className={`${inputClass} mt-1.5`}
-            />
-            {!locked && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {TONE_PRESETS.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => onChange({ tone: t })}
-                    aria-pressed={letter.tone === t}
-                    className="rounded-sm border border-rule px-1.5 py-0.5 text-[11.5px] text-muted hover:text-ink aria-pressed:border-ink aria-pressed:text-ink"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="group relative mt-1.5">
+              <input
+                id="letter-tone"
+                value={letter.tone}
+                onChange={(e) => onChange({ tone: e.target.value })}
+                onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()}
+                placeholder="Dry, understated British wit"
+                maxLength={300}
+                disabled={locked}
+                autoComplete="off"
+                className={inputClass}
+              />
+              {!locked && (
+                <fieldset className="absolute inset-x-0 top-full z-20 mt-1 hidden flex-wrap gap-1 rounded-md border border-rule bg-paper p-2 shadow-lg group-focus-within:flex">
+                  <legend className="sr-only">Tone presets</legend>
+                  {TONE_PRESETS.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      // Keep focus in the input so the popper stays open until a pick.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        onChange({ tone: t });
+                        (document.activeElement as HTMLElement | null)?.blur();
+                      }}
+                      aria-pressed={letter.tone === t}
+                      className="rounded-sm border border-rule px-1.5 py-0.5 text-[11.5px] text-muted hover:text-ink aria-pressed:border-ink aria-pressed:text-ink"
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </fieldset>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -647,10 +728,9 @@ function BriefingSection({
         value={letter.briefing}
         onChange={(e) => onChange(e.target.value)}
         placeholder="A short editorial overview of the day's most important developments. Separate paragraphs with a blank line."
-        rows={6}
         maxLength={5000}
         disabled={locked}
-        className={`${inputClass} resize-y font-serif text-[15px] leading-relaxed`}
+        className={`${inputClass} h-80 resize-none font-serif text-[15px] leading-relaxed`}
       />
       {!locked && (
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">

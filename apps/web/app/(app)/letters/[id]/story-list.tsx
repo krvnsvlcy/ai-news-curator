@@ -18,11 +18,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useId, useState, useTransition } from "react";
-import { ExternalIcon, GripIcon, SparkleIcon, TrashIcon } from "@/components/icons";
+import TextareaAutosize from "react-textarea-autosize";
+import {
+  ChevronRightIcon,
+  ExternalIcon,
+  GripIcon,
+  SparkleIcon,
+  TrashIcon,
+} from "@/components/icons";
 import type { EditorStory } from "@/lib/letters";
 import { suggestStoryHeadlinesAction } from "../actions";
 import { AiButton, AiError, Suggestions } from "./ai-suggestions";
-import { inputClass } from "./fields";
 
 export function toSourceStory(s: EditorStory) {
   return {
@@ -115,12 +121,14 @@ function StoryCard({
     transition,
     isDragging,
   } = useSortable({ id: story.id, disabled: locked });
+  const [open, setOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
   const n = String(index + 1).padStart(2, "0");
+  const bodyId = useId();
 
   function generate() {
     setError(undefined);
@@ -140,35 +148,52 @@ function StoryCard({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`rounded-lg border bg-paper ${isDragging ? "relative z-10 border-ink shadow-lg" : "border-rule"}`}
+      className={`overflow-hidden rounded-lg border bg-paper ${isDragging ? "relative z-10 border-ink shadow-lg" : "border-rule"}`}
     >
-      <div className="flex gap-2 p-3 sm:p-4">
-        <div className="flex flex-col items-center gap-1 pt-1">
-          {!locked && (
-            <button
-              type="button"
-              ref={setActivatorNodeRef}
-              {...attributes}
-              {...listeners}
-              aria-label={`Reorder story ${index + 1}. Press space to pick up, arrows to move.`}
-              className="cursor-grab touch-none rounded-sm p-0.5 text-muted hover:bg-hover hover:text-ink active:cursor-grabbing"
-            >
-              <GripIcon className="size-4" />
-            </button>
-          )}
-          <span className="text-[11px] font-semibold text-muted tabular-nums">{n}</span>
-        </div>
+      <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
+        {!locked && (
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label={`Reorder story ${index + 1}. Press space to pick up, arrows to move.`}
+            className="cursor-grab touch-none rounded-sm p-0.5 text-muted hover:bg-hover hover:text-ink active:cursor-grabbing"
+          >
+            <GripIcon className="size-4" />
+          </button>
+        )}
+        <span className="w-5 shrink-0 text-[11px] font-semibold text-muted tabular-nums">{n}</span>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={open ? bodyId : undefined}
+          title={open ? "Collapse" : "Expand"}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <span
+            className={`min-w-0 flex-1 truncate text-[15px] font-semibold ${story.headline.trim() ? "text-ink" : "text-ink/55"}`}
+          >
+            {story.headline.trim() || story.original.title}
+          </span>
+          <ChevronRightIcon
+            className={`size-4 shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+          />
+        </button>
+      </div>
 
-        <div className="min-w-0 flex-1 space-y-2">
-          <input
+      {open && (
+        <div id={bodyId} className="border-t border-rule">
+          <TextareaAutosize
             aria-label={`Headline for story ${index + 1}`}
             value={story.headline}
-            onChange={(e) => onUpdate({ headline: e.target.value })}
-            placeholder={story.original.title}
-            title="Leave empty to use the original headline"
+            onChange={(e) => onUpdate({ headline: e.target.value.replace(/\s*\n\s*/g, " ") })}
+            onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+            placeholder={`${story.original.title} (original, used when empty)`}
             disabled={locked}
             maxLength={300}
-            className={`${inputClass} text-[15px] font-semibold`}
+            className="block w-full resize-none border-0 border-b border-rule bg-transparent px-3 py-2.5 text-[15px] font-semibold text-ink outline-none transition-colors placeholder:font-normal placeholder:text-muted/60 focus:bg-hover/40 disabled:text-muted sm:px-4"
           />
           <textarea
             aria-label={`Description for story ${index + 1}`}
@@ -176,62 +201,64 @@ function StoryCard({
             onChange={(e) => onUpdate({ description: e.target.value })}
             placeholder="Optional context (one or two sentences)"
             disabled={locked}
-            rows={2}
             maxLength={1000}
-            className={`${inputClass} resize-y text-[13.5px]`}
+            className="block h-32 w-full resize-none border-0 border-b border-rule bg-transparent px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-muted/60 focus:bg-hover/40 disabled:text-muted sm:px-4"
           />
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
-            <span className="font-medium text-ink">{story.original.sourceName}</span>
-            {!story.articleId && (
-              <span className="rounded-sm border border-rule px-1 text-[11px]">External</span>
-            )}
-            <a
-              href={story.original.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-w-0 items-center gap-1 hover:text-ink hover:underline"
-              title="Open original article"
-            >
-              <span className="truncate">{story.original.title}</span>
-              <ExternalIcon className="size-3.5 shrink-0" />
-            </a>
-          </div>
-
-          {!locked && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setAiOpen((o) => !o)}
-                aria-expanded={aiOpen}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-violet-700 hover:bg-violet-50"
+          <div className="space-y-2 px-3 py-3 sm:px-4">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
+              <span className="font-medium text-ink">{story.original.sourceName}</span>
+              {!story.articleId && (
+                <span className="rounded-sm border border-rule px-1 text-[11px]">External</span>
+              )}
+              <a
+                href={story.original.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-w-0 items-center gap-1 hover:text-ink hover:underline"
+                title="Open original article"
               >
-                <SparkleIcon className="size-3.5" />
-                {story.headline.trim() ? "Rewrite headline" : "Suggest headline"}
-              </button>
-              {story.headline !== story.original.title && (
+                <span className="truncate">{story.original.title}</span>
+                <ExternalIcon className="size-3.5 shrink-0" />
+              </a>
+            </div>
+
+            {!locked && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <button
                   type="button"
-                  onClick={() => onUpdate({ headline: story.original.title })}
-                  className="h-7 rounded-md px-2 text-[12.5px] text-muted hover:bg-hover hover:text-ink"
+                  onClick={() => setAiOpen((o) => !o)}
+                  aria-expanded={aiOpen}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-violet-700 hover:bg-violet-50"
                 >
-                  Use original
+                  <SparkleIcon className="size-3.5" />
+                  {story.headline.trim() ? "Rewrite headline" : "Suggest headline"}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={onRemove}
-                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-muted hover:bg-red-50 hover:text-red-700"
-                aria-label={`Remove story ${index + 1} from letter`}
-              >
-                <TrashIcon className="size-3.5" /> Remove
-              </button>
-            </div>
-          )}
+                {story.headline !== story.original.title && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdate({ headline: story.original.title })}
+                    className="h-7 rounded-md px-2 text-[12.5px] text-muted hover:bg-hover hover:text-ink"
+                  >
+                    Use original
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onRemove}
+                  className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-muted hover:bg-red-50 hover:text-red-700"
+                  aria-label={`Remove story ${index + 1} from letter`}
+                >
+                  <TrashIcon className="size-3.5" /> Remove
+                </button>
+              </div>
+            )}
+          </div>
 
           {aiOpen && !locked && (
-            <div className="rounded-md border border-rule bg-canvas p-2.5">
-              <div className="flex gap-2">
+            <div className="border-t border-rule bg-canvas">
+              <div className="flex items-center gap-2 pr-3 sm:pr-4">
                 <input
+                  aria-label={`Direction for story ${index + 1} headline`}
                   value={instruction}
                   onChange={(e) => setInstruction(e.target.value)}
                   onKeyDown={(e) => {
@@ -242,22 +269,24 @@ function StoryCard({
                   }}
                   placeholder="Optional direction, e.g. “punchier”, “less pun-heavy”"
                   maxLength={500}
-                  className={`${inputClass} h-7 py-0 text-[13px]`}
+                  className="h-11 min-w-0 flex-1 border-0 bg-transparent px-3 text-[13px] text-ink outline-none placeholder:text-muted/60 sm:px-4"
                 />
                 <AiButton pending={pending} onClick={generate}>
                   Generate
                 </AiButton>
               </div>
-              <AiError message={error} />
-              <Suggestions
-                items={suggestions}
-                onPick={(h) => onUpdate({ headline: h })}
-                onDismiss={() => setSuggestions([])}
-              />
+              <div className="px-3 pb-3 empty:hidden sm:px-4">
+                <AiError message={error} />
+                <Suggestions
+                  items={suggestions}
+                  onPick={(h) => onUpdate({ headline: h })}
+                  onDismiss={() => setSuggestions([])}
+                />
+              </div>
             </div>
           )}
         </div>
-      </div>
+      )}
     </li>
   );
 }

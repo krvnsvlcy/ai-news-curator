@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/button-styles";
 import { PageBody, PageHeader, Panel } from "@/components/page";
 import { requireSession } from "@/lib/auth/session";
 import { formatDateTime, timeAgo } from "@/lib/format";
+import { RefreshFeedButton } from "./refresh-feed-button";
 
 export const metadata = { title: "Feed · AI News Curator" };
 
@@ -40,9 +41,16 @@ export default async function FeedPage({
             : `Latest stories from ${sources.length} ${sources.length === 1 ? "source" : "sources"}`
         }
         actions={
-          <Link href="/settings/sources" className={buttonClass("secondary")}>
-            Manage sources
-          </Link>
+          <>
+            <Link href="/settings/sources" className={buttonClass("secondary")}>
+              Manage sources
+            </Link>
+            <RefreshFeedButton
+              sources={sources
+                .filter((s) => s.enabled)
+                .map((s) => ({ id: s._id.toHexString(), name: s.name }))}
+            />
+          </>
         }
       />
       <PageBody>

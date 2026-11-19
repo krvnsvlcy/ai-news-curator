@@ -69,3 +69,39 @@ export async function countArticlesBySource(): Promise<Map<string, number>> {
     .toArray();
   return new Map(rows.map((r) => [String(r._id), r.count]));
 }
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Case-insensitive search over titles and summaries, newest first. Every word
+ * in the query must appear somewhere in the title or summary.
+ */
+export async function searchArticles({
+  query = "",
+  sourceSlug,
+  limit = 40,
+}: {
+  query?: string;
+  sourceSlug?: string;
+  limit?: number;
+} = {}): Promise<ArticleDoc[]> {
+  const words = query.trim().split(/\s+/).filter(Boolean).slice(0, 8);
+  const { articles } = await collections();
+  return articles
+    .find({
+      ...(sourceSlug ? { sourceSlug } : {}),
+      ...(words.length
+        ? {
+            $and: words.map((w) => {
+              const re = new RegExp(escapeRegExp(w), "i");
+              return { $or: [{ title: re }, { summary: re }] };
+            }),
+          }
+        : {}),
+    })
+    .sort({ publishedAt: -1, _id: -1 })
+    .limit(Math.min(Math.max(limit, 1), 100))
+    .toArray();
+}

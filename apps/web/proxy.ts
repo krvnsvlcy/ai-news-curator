@@ -4,9 +4,14 @@ import { verifySessionToken } from "@/lib/auth/token";
 
 // Early redirect for unauthenticated requests. Pages and server actions
 // still call requireSession(); this is not the only line of defense.
+// Reachable without signing in. Subscribe/unsubscribe are reader-facing and only
+// touch the visitor's own browser storage.
+const PUBLIC_PATHS = new Set(["/login", "/subscribe", "/unsubscribe"]);
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/login") return NextResponse.next();
+  // /r/<token>: tracked email links; the token is verified by the route itself.
+  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/r/")) return NextResponse.next();
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (await verifySessionToken(getAuthConfig(), token)) return NextResponse.next();

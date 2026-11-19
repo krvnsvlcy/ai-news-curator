@@ -55,6 +55,50 @@ MONGO_TEST_URL=mongodb://localhost:27399 pnpm test
 
 Without `MONGO_TEST_URL` the database integration tests are skipped.
 
+## Letters
+
+A letter is one edition of the daily email: headline, publication date, a 60–100 word daily briefing, and an ordered list of stories. Manage them at `/letters`; each opens in the editor at `/letters/:id`.
+
+- **Stories** are picked from the stored articles (or added manually as external links). Each story keeps a reference to its article _and_ a snapshot of the original headline, URL and publisher, plus its own rewritten headline and description. Editing a story in one letter never touches the article or any other letter.
+- **Lifecycle:** draft → ready → published. "Ready" requires a headline, a briefing, at least one story and a headline on every story. Editing a ready letter so it no longer qualifies moves it back to draft. Published letters are locked and store the exact HTML rendered at publication (`publishedHtml`), so past editions are reproducible. Duplicate a letter to start a new edition from it. Only drafts can be deleted.
+- **Concurrent edits:** every save carries the letter's `revision`; a stale save is rejected instead of overwriting someone else's changes.
+- **Preview:** the editor renders the same HTML (`@curator/newsletter`) that delivery will send, live, at desktop or mobile width. Subscription links use `{{manage_url}}` / `{{unsubscribe_url}}` merge tags for the delivery step to fill in.
+- **AI assistance** (`@curator/ai`, Claude Opus 5.5): suggest letter headlines, write or revise the briefing, and rewrite individual story headlines, in an editorial tone you choose. Prompts are grounded in the selected stories only, and results are offered as suggestions; nothing is applied without the editor choosing it. Needs `ANTHROPIC_API_KEY` in `apps/web/.env.local`. Requests opt into server-side fallbacks (`fallbacks: "default"`), so a safety decline is retried on a fallback model within the same call.
+
+## Subscribers and sending (demo)
+
+Subscribers are deliberately **not** stored on the server. For this demo they live in the browser's `localStorage`, so anyone testing can send real email without reaching people they didn't add themselves.
+
+- `/subscribers` (signed in): add one or paste a list, unsubscribe/resubscribe, remove, search, clear. Shows a notice explaining the list is local to this browser.
+- `/subscribe` and `/unsubscribe?email=…` are public, reader-facing pages styled like the email. They read and write the same browser's list, so an unsubscribe link from a delivered email works when opened in the browser that sent it.
+- In the letter editor, **Send** opens a dialog:
+  - **Send a test**: any status, up to 5 addresses, subject prefixed with "[Test]".
+  - **Send to subscribers**: the letter must be _ready_ (or already published). The browser passes its active subscribers to the server for that one send; addresses are never stored. A ready letter is published when at least one email is delivered; a published letter is always re-sent from its archived HTML.
+  - Each email is personalized with its own unsubscribe link (also sent as a `List-Unsubscribe` header) and includes a plain-text part. The letter keeps a send history with counts only.
+- Delivery needs `SMTP_URL` and `SMTP_FROM` in `apps/web/.env.local`. Any SMTP provider works. For local testing, use [Mailpit](https://mailpit.axllent.org/):
+
+  ```sh
+  docker run -d --rm -p 1025:1025 -p 8025:8025 axllent/mailpit
+  # SMTP_URL=smtp://localhost:1025, inbox at http://localhost:8025
+  ```
+
+## Tracking and analytics
+
+`/analytics` shows, for letters sent to subscribers (test sends are tracked but excluded):
+
+- **Emails submitted** (and delivered/failed), from each letter's send history.
+- **Unique recipients who clicked**, overall and per letter, with the click rate (unique clickers ÷ delivered).
+- **Total clicks per article**: `/analytics/:letterId` lists every story in letter order.
+- **Most-clicked stories** across all letters.
+- **Unsubscribes**, counted once per reader per letter.
+
+How it works, without storing addresses:
+
+- Every reader gets an **anonymous id**: an HMAC of their address keyed by `TRACKING_SECRET` (default: `AUTH_SECRET`). It's stable across letters, so readers can be counted, but can't be reversed without the secret.
+- At send time each story link becomes `/r/<token>`, a signed token with the letter, story, reader id and test flag. `/r/…` records the click (in `email_events`) and redirects to the story URL **stored in the letter**, so it can't be used as an open redirect, and tampered tokens are rejected.
+- The unsubscribe link carries a signed token too. When the reader confirms on `/unsubscribe`, the page reports it to the server along with the token, and the event is recorded against the letter.
+- Mail providers that pre-scan links can add clicks; there's no bot filtering yet.
+
 ## Authentication
 
 The web app is an internal tool protected by one shared password.

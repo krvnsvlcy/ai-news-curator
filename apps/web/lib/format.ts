@@ -36,3 +36,21 @@ export function formatInterval(minutes: number): string {
   if (minutes < 1440) return `every ${minutes / 60} hours`;
   return "daily";
 }
+
+/** "Thu 19 Nov 2026" for a YYYY-MM-DD calendar date. */
+export function formatShortCalendarDate(isoDate: string): string {
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value]),
+  );
+  return `${p.weekday} ${p.day} ${p.month} ${p.year}`;
+}

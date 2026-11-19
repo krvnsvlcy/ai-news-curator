@@ -3,10 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ComponentType, type ReactNode, type SVGProps, useEffect, useState } from "react";
-import { CloseIcon, FeedIcon, MenuIcon, SignOutIcon, SourcesIcon } from "./icons";
+import {
+  ChartIcon,
+  CloseIcon,
+  FeedIcon,
+  LettersIcon,
+  MenuIcon,
+  SignOutIcon,
+  SourcesIcon,
+  UsersIcon,
+} from "./icons";
 import { Wordmark } from "./wordmark";
 
 const NAV: { href: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
+  { href: "/letters", label: "Letters", icon: LettersIcon },
+  { href: "/subscribers", label: "Subscribers", icon: UsersIcon },
+  { href: "/analytics", label: "Analytics", icon: ChartIcon },
   { href: "/", label: "Feed", icon: FeedIcon },
   { href: "/sources", label: "Sources", icon: SourcesIcon },
 ];

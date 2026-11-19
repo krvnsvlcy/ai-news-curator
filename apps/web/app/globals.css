@@ -13,6 +13,8 @@
   --color-chip: #efefed;
   --color-hover: #ececea;
   --color-accent: #1a8917;
+  /* Data series (validated: dataviz validate_palette, light #fff / dark #191919). */
+  --color-series-1: #2a78d6;
 }
 
 @layer base {
@@ -27,6 +29,7 @@
       --color-chip: #252525;
       --color-hover: #222222;
       --color-accent: #4caf50;
+      --color-series-1: #3987e5;
     }
   }
 

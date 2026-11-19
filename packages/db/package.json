@@ -16,6 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@curator/newsletter": "workspace:*",
     "mongodb": "^7.9.0",
     "zod": "^4.6.7"
   },

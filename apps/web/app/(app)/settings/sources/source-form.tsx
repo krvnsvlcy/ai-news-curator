@@ -33,10 +33,7 @@ export function SourceForm({
     >
       <div className="space-y-6 p-5 sm:p-6">
         {e.form && (
-          <p
-            role="alert"
-            className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"
-          >
+          <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
             {e.form}
           </p>
         )}
@@ -170,13 +167,13 @@ export function SourceForm({
             type="checkbox"
             name="enabled"
             defaultChecked={v.enabled}
-            className="size-4 accent-ink"
+            className="size-4 accent-primary"
           />
           Enabled
         </label>
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-rule bg-canvas px-5 py-3 sm:px-6">
-        <Link href="/sources" className={buttonClass("quiet")}>
+        <Link href="/settings/sources" className={buttonClass("quiet")}>
           Cancel
         </Link>
         <SubmitButton pendingText="Saving…">{submitLabel}</SubmitButton>
@@ -208,7 +205,7 @@ function Field({
       </label>
       {children}
       {error ? (
-        <p role="alert" className="mt-1.5 text-[13px] text-red-600 dark:text-red-400">
+        <p role="alert" className="mt-1.5 text-[13px] text-red-600">
           {error}
         </p>
       ) : (
@@ -239,7 +236,7 @@ function KindOption({
         value={value}
         checked={checked}
         onChange={() => onSelect(value)}
-        className="mt-1 accent-ink"
+        className="mt-1 accent-primary"
       />
       <span>
         <span className="block text-[14px] font-medium">{title}</span>

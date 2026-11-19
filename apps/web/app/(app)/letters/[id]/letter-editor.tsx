@@ -22,6 +22,7 @@ import {
   type LetterStatus,
   type PickerArticle,
 } from "@/lib/letters";
+import { TONE_PRESETS } from "@/lib/tones";
 import {
   changeLetterStatusAction,
   duplicateLetterAction,
@@ -37,13 +38,6 @@ import { inputClass, labelClass } from "./fields";
 import { LetterPreview } from "./letter-preview";
 import { SendDialog } from "./send-dialog";
 import { StoryList, toSourceStory } from "./story-list";
-
-const TONE_PRESETS = [
-  "Dry, understated British wit",
-  "Playful and punny",
-  "Sharp political satire",
-  "Straight and informative",
-];
 
 const keyOf = (c: EditorLetterContent) => JSON.stringify(contentOf(c));
 
@@ -189,9 +183,9 @@ export function LetterEditor({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Toolbar */}
-      <header className="sticky top-14 z-10 border-b border-rule bg-paper/95 backdrop-blur lg:top-0">
+      <header className="shrink-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
           <Link
             href="/letters"
@@ -212,7 +206,7 @@ export function LetterEditor({
             <p className="text-[12px] text-muted">
               {formatLetterDate(letter.date)} ·{" "}
               {dirty ? (
-                <span className="text-amber-700 dark:text-amber-400">Unsaved changes</span>
+                <span className="text-amber-700">Unsaved changes</span>
               ) : locked && letter.publishedAt ? (
                 `Published ${timeAgo(new Date(letter.publishedAt))}`
               ) : (
@@ -230,7 +224,7 @@ export function LetterEditor({
               />
             )}
             {letter.sends.some((x) => x.kind === "subscribers") && (
-              <Link href={`/analytics/${letter.id}`} className={buttonClass("quiet")}>
+              <Link href={`/letters/${letter.id}/analytics`} className={buttonClass("quiet")}>
                 Analytics
               </Link>
             )}
@@ -299,12 +293,12 @@ export function LetterEditor({
         {banner && (
           <div
             role={banner.kind === "error" ? "alert" : "status"}
-            className={`border-t px-4 py-2 text-[13px] sm:px-6 ${
+            className={`mx-4 mb-3 rounded-md border px-3 py-2 text-[13px] sm:mx-6 ${
               banner.kind === "error"
-                ? "border-red-600/20 bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+                ? "border-red-600/20 bg-red-50 text-red-800"
                 : banner.kind === "notice"
-                  ? "border-amber-500/20 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
-                  : "border-green-600/20 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+                  ? "border-amber-500/20 bg-amber-50 text-amber-900"
+                  : "border-sea/25 bg-sea/10 text-sea"
             }`}
           >
             {banner.text}
@@ -319,7 +313,7 @@ export function LetterEditor({
             )}
           </div>
         )}
-        <div role="tablist" aria-label="View" className="flex border-t border-rule xl:hidden">
+        <div role="tablist" aria-label="View" className="flex px-4 sm:px-6 xl:hidden">
           {(["edit", "preview"] as const).map((v) => (
             <button
               key={v}
@@ -335,13 +329,13 @@ export function LetterEditor({
         </div>
       </header>
 
-      <div className="grid flex-1 grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Editor column */}
         <div
-          className={`space-y-5 px-4 py-6 sm:px-6 ${mobileView === "edit" ? "" : "hidden xl:block"}`}
+          className={`space-y-5 overflow-y-auto px-4 py-6 sm:px-6 ${mobileView === "edit" ? "" : "hidden xl:block"}`}
         >
           {locked && (
-            <p className="rounded-md border border-green-600/20 bg-green-50 px-3 py-2 text-[13px] text-green-900 dark:bg-green-950/30 dark:text-green-300">
+            <p className="rounded-md border border-sea/25 bg-sea/10 px-3 py-2 text-[13px] text-sea">
               This edition is published and locked so it stays exactly as sent. Duplicate it to
               start a new draft.
             </p>
@@ -427,9 +421,9 @@ export function LetterEditor({
 
         {/* Preview column */}
         <div
-          className={`border-rule px-4 py-6 sm:px-6 xl:border-l ${mobileView === "preview" ? "" : "hidden xl:block"}`}
+          className={`px-4 py-6 sm:px-6 xl:pl-0 ${mobileView === "preview" ? "" : "hidden xl:block"}`}
         >
-          <div className="h-[calc(100dvh-10rem)] xl:sticky xl:top-[5.5rem] xl:h-[calc(100dvh-7rem)]">
+          <div className="h-full">
             <LetterPreview
               letter={letter}
               newsletter={newsletter}
@@ -591,7 +585,7 @@ function EditionSection({
                     type="button"
                     onClick={() => onChange({ tone: t })}
                     aria-pressed={letter.tone === t}
-                    className="rounded border border-rule px-1.5 py-0.5 text-[11.5px] text-muted hover:text-ink aria-pressed:border-ink aria-pressed:text-ink"
+                    className="rounded-sm border border-rule px-1.5 py-0.5 text-[11.5px] text-muted hover:text-ink aria-pressed:border-ink aria-pressed:text-ink"
                   >
                     {t}
                   </button>
@@ -642,7 +636,7 @@ function BriefingSection({
       title="Daily briefing"
       aside={
         <span
-          className={`text-[12px] tabular-nums ${words === 0 ? "text-muted" : inRange ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-400"}`}
+          className={`text-[12px] tabular-nums ${words === 0 ? "text-muted" : inRange ? "text-sea" : "text-amber-700"}`}
         >
           {words} / {BRIEFING_WORDS.min}–{BRIEFING_WORDS.max} words
         </span>

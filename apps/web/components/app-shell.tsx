@@ -3,24 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ComponentType, type ReactNode, type SVGProps, useEffect, useState } from "react";
+import { EditorialWordmark } from "./editorial";
 import {
-  ChartIcon,
   CloseIcon,
   FeedIcon,
+  HomeIcon,
   LettersIcon,
   MenuIcon,
+  SettingsIcon,
   SignOutIcon,
-  SourcesIcon,
   UsersIcon,
 } from "./icons";
-import { Wordmark } from "./wordmark";
 
 const NAV: { href: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
+  { href: "/", label: "Home", icon: HomeIcon },
   { href: "/letters", label: "Letters", icon: LettersIcon },
   { href: "/subscribers", label: "Subscribers", icon: UsersIcon },
-  { href: "/analytics", label: "Analytics", icon: ChartIcon },
-  { href: "/", label: "Feed", icon: FeedIcon },
-  { href: "/sources", label: "Sources", icon: SourcesIcon },
+  { href: "/feed", label: "Feed", icon: FeedIcon },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -30,9 +29,12 @@ function isActive(pathname: string, href: string) {
 export function AppShell({
   children,
   signOut,
+  subscriberTotal,
 }: {
   children: ReactNode;
   signOut: () => Promise<void>;
+  /** Subscribers across everyone. */
+  subscriberTotal: number;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -51,7 +53,7 @@ export function AppShell({
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center justify-between px-4">
-        <Wordmark />
+        <EditorialWordmark className="text-xl" />
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -70,16 +72,29 @@ export function AppShell({
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[14px] text-muted transition-colors hover:bg-hover hover:text-ink aria-[current=page]:bg-hover aria-[current=page]:font-medium aria-[current=page]:text-ink"
+              className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[14px] text-muted transition-colors hover:bg-hover hover:text-ink aria-[current=page]:bg-primary aria-[current=page]:font-medium aria-[current=page]:text-paper aria-[current=page]:hover:bg-primary aria-[current=page]:hover:text-paper"
             >
               <Icon className="size-[18px] shrink-0" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {href === "/subscribers" && (
+                <span className="text-[12px] tabular-nums opacity-80" title="Subscribers in total">
+                  {subscriberTotal.toLocaleString("en-GB")}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-rule p-2">
+      <div className="space-y-0.5 p-2">
+        <Link
+          href="/settings"
+          aria-current={isActive(pathname, "/settings") ? "page" : undefined}
+          className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[14px] text-muted transition-colors hover:bg-hover hover:text-ink aria-[current=page]:bg-primary aria-[current=page]:font-medium aria-[current=page]:text-paper aria-[current=page]:hover:bg-primary aria-[current=page]:hover:text-paper"
+        >
+          <SettingsIcon className="size-[18px] shrink-0" />
+          Settings
+        </Link>
         <form action={signOut}>
           <button
             type="submit"
@@ -94,11 +109,9 @@ export function AppShell({
   );
 
   return (
-    <div className="min-h-dvh lg:pl-60">
+    <div className="flex h-dvh overflow-hidden bg-canvas">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-rule bg-sidebar lg:block">
-        {sidebar}
-      </aside>
+      <aside className="hidden w-60 shrink-0 lg:block">{sidebar}</aside>
 
       {/* Mobile drawer */}
       <div className={`lg:hidden ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
@@ -110,28 +123,34 @@ export function AppShell({
           className={`fixed inset-0 z-30 cursor-default bg-black/30 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-rule bg-sidebar transition-transform ${open ? "translate-x-0" : "-translate-x-full"}`}
+          className={`fixed inset-y-0 left-0 z-40 w-64 bg-canvas transition-transform ${open ? "translate-x-0" : "-translate-x-full"}`}
           inert={!open}
         >
           {sidebar}
         </aside>
       </div>
 
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-rule bg-sidebar/95 px-4 backdrop-blur lg:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="-ml-1.5 rounded-md p-1.5 text-muted hover:bg-hover hover:text-ink"
-          aria-label="Open navigation"
-          aria-expanded={open}
-        >
-          <MenuIcon className="size-5" />
-        </button>
-        <Wordmark />
-      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile top bar */}
+        <div className="flex h-14 shrink-0 items-center gap-3 px-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="-ml-1.5 rounded-md p-1.5 text-muted hover:bg-hover hover:text-ink"
+            aria-label="Open navigation"
+            aria-expanded={open}
+          >
+            <MenuIcon className="size-5" />
+          </button>
+          <EditorialWordmark className="text-xl" />
+        </div>
 
-      {children}
+        {/* Main area: one large card, inset from the screen edge. It scrolls; each
+          page's PageHeader sticks to its top over a translucent, blurred background. */}
+        <div className="mx-2 mb-2 flex min-h-0 flex-1 flex-col overflow-y-auto rounded-lg border border-rule/70 bg-surface lg:my-2 lg:ml-0">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

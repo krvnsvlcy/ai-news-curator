@@ -3,6 +3,13 @@ import { getMongoConfig } from "./config.js";
 import type { EmailEventDoc } from "./events.js";
 import type { LetterDoc } from "./letter-schema.js";
 import type { ArticleDoc, SourceDoc } from "./schema.js";
+import {
+  type CounterDoc,
+  type DailyStatsDoc,
+  type LetterReaderDoc,
+  seedSubscriberCounter,
+} from "./stats.js";
+import type { SubscriberDoc } from "./subscribers.js";
 
 interface Cached {
   client: Promise<MongoClient>;
@@ -42,6 +49,10 @@ export async function collections(): Promise<{
   articles: Collection<ArticleDoc>;
   letters: Collection<LetterDoc>;
   events: Collection<EmailEventDoc>;
+  subscribers: Collection<SubscriberDoc>;
+  daily: Collection<DailyStatsDoc>;
+  counters: Collection<CounterDoc>;
+  readers: Collection<LetterReaderDoc>;
 }> {
   const db = await getDb();
   return {
@@ -49,6 +60,10 @@ export async function collections(): Promise<{
     articles: db.collection<ArticleDoc>("articles"),
     letters: db.collection<LetterDoc>("letters"),
     events: db.collection<EmailEventDoc>("email_events"),
+    subscribers: db.collection<SubscriberDoc>("subscribers"),
+    daily: db.collection<DailyStatsDoc>("daily_stats"),
+    counters: db.collection<CounterDoc>("counters"),
+    readers: db.collection<LetterReaderDoc>("letter_readers"),
   };
 }
 
@@ -59,6 +74,8 @@ export async function closeDb(): Promise<void> {
 }
 
 async function ensureIndexes(db: Db): Promise<void> {
+  await migrateSubscribers(db);
+  await seedSubscriberCounter(db);
   await Promise.all([
     db.collection("sources").createIndex({ slug: 1 }, { unique: true }),
     db
@@ -72,14 +89,42 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection("letters").createIndex({ "stories.articleId": 1 }),
     db.collection("email_events").createIndex({ letterId: 1, type: 1, test: 1 }),
     db.collection("email_events").createIndex({ type: 1, test: 1, at: -1 }),
-    // One unsubscribe per reader per letter.
-    db.collection("email_events").createIndex(
-      { letterId: 1, recipient: 1 },
-      {
-        unique: true,
-        partialFilterExpression: { type: "unsubscribe" },
-        name: "unsubscribe_once",
-      },
-    ),
+    // Dedupe: one row per address, stored lowercased.
+    db.collection("subscribers").createIndex({ email: 1 }, { unique: true }),
+    db.collection("subscribers").createIndex({ ownerIds: 1, subscribedAt: -1 }),
   ]);
+}
+
+/**
+ * Brings older subscriber rows up to date (idempotent, cheap when none left):
+ * - rows a reader unsubscribed are deleted (there's no opting out any more;
+ *   editors can re-add an address);
+ * - the single `ownerId` becomes the `ownerIds` list;
+ * - fields of removed features (status, signup source, name) are dropped.
+ */
+export async function migrateSubscribers(db: Db): Promise<void> {
+  const subscribers = db.collection("subscribers");
+  await subscribers.deleteMany({ status: "unsubscribed" });
+  await subscribers.updateMany({ ownerIds: { $exists: false } }, [
+    {
+      $set: {
+        ownerIds: {
+          $cond: [{ $eq: [{ $type: "$ownerId" }, "string"] }, ["$ownerId"], []],
+        },
+      },
+    },
+    { $unset: "ownerId" },
+  ]);
+  await subscribers.updateMany(
+    {
+      $or: [
+        { status: { $exists: true } },
+        { source: { $exists: true } },
+        { name: { $exists: true } },
+      ],
+    },
+    { $unset: { status: "", source: "", unsubscribedAt: "", name: "" } },
+  );
+  // A row nobody references can't be seen or removed by anyone.
+  await subscribers.deleteMany({ ownerIds: { $size: 0 } });
 }

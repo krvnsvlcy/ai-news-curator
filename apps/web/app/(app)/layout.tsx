@@ -1,3 +1,4 @@
+import { countSubscribers } from "@curator/db";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { requireSession } from "@/lib/auth/session";
@@ -7,5 +8,11 @@ import { logout } from "../login/actions";
 // itself: layouts don't re-render on every client navigation.
 export default async function AppLayout({ children }: { children: ReactNode }) {
   await requireSession();
-  return <AppShell signOut={logout}>{children}</AppShell>;
+  // Total across everyone (a count only); shown in the nav on every page.
+  const total = await countSubscribers();
+  return (
+    <AppShell signOut={logout} subscriberTotal={total}>
+      {children}
+    </AppShell>
+  );
 }

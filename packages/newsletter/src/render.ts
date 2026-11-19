@@ -21,20 +21,15 @@ export interface NewsletterLetter {
 export interface NewsletterOptions {
   publicationName: string;
   tagline?: string;
-  /** Delivery fills these in per subscriber; defaults are ESP-style merge tags. */
-  manageUrl?: string;
-  unsubscribeUrl?: string;
   /** Shown in the footer as the reason the reader gets this email. */
   recipientNote?: string;
 }
 
-export const MERGE_TAGS = {
-  manageUrl: "{{manage_url}}",
-  unsubscribeUrl: "{{unsubscribe_url}}",
-} as const;
-
-/** Bump when the template changes in a way that alters published output. */
-export const TEMPLATE_VERSION = 1;
+/**
+ * Bump when the template changes in a way that alters published output.
+ * v2: no subscription links (subscribers are managed by the editor only).
+ */
+export const TEMPLATE_VERSION = 2;
 
 const C = {
   page: "#f3f2ee",
@@ -62,7 +57,6 @@ export function escapeHtml(s: string): string {
 export function safeHref(url: string | undefined): string {
   if (!url) return "#";
   const u = url.trim();
-  if (/^\{\{[a-z_]+\}\}$/.test(u)) return u;
   return /^https?:\/\//i.test(u) ? escapeHtml(u) : "#";
 }
 
@@ -121,12 +115,14 @@ function storyBlock(story: NewsletterStory, index: number, last: boolean): strin
           </tr>`;
 }
 
+function defaultRecipientNote(publicationName: string): string {
+  return `You're receiving this because the editors of ${publicationName} added you to the list.`;
+}
+
 export function renderLetterHtml(letter: NewsletterLetter, options: NewsletterOptions): string {
   const name = escapeHtml(options.publicationName);
   const headline = escapeHtml(letter.headline.trim() || "Untitled edition");
   const date = escapeHtml(formatLetterDate(letter.date));
-  const manage = safeHref(options.manageUrl ?? MERGE_TAGS.manageUrl);
-  const unsubscribe = safeHref(options.unsubscribeUrl ?? MERGE_TAGS.unsubscribeUrl);
   const briefing = paragraphs(letter.briefing)
     .map(
       (p) =>
@@ -208,12 +204,7 @@ export function renderLetterHtml(letter: NewsletterLetter, options: NewsletterOp
           <tr>
             <td class="px" style="padding:24px 48px 8px 48px;font-family:${SANS};font-size:12px;line-height:1.6;color:${C.muted};text-align:center;">
               <p style="margin:0 0 6px 0;font-weight:700;color:${C.body};">${name}</p>
-              <p style="margin:0 0 6px 0;">${escapeHtml(options.recipientNote ?? `You're receiving this because you subscribed to ${options.publicationName}.`)}</p>
-              <p style="margin:0;">
-                <a href="${manage}" target="_blank" rel="noopener" style="color:${C.muted};text-decoration:underline;">Manage subscription</a>
-                &nbsp;·&nbsp;
-                <a href="${unsubscribe}" target="_blank" rel="noopener" style="color:${C.muted};text-decoration:underline;">Unsubscribe</a>
-              </p>
+              <p style="margin:0;">${escapeHtml(options.recipientNote ?? defaultRecipientNote(options.publicationName))}</p>
             </td>
           </tr>
         </table>
@@ -239,10 +230,6 @@ export function renderLetterText(letter: NewsletterLetter, options: NewsletterOp
     if (s.description?.trim()) lines.push(s.description.trim());
     lines.push(`${s.sourceName}: ${s.originalTitle}`, s.url, "");
   });
-  lines.push(
-    "—",
-    `Manage subscription: ${options.manageUrl ?? MERGE_TAGS.manageUrl}`,
-    `Unsubscribe: ${options.unsubscribeUrl ?? MERGE_TAGS.unsubscribeUrl}`,
-  );
+  lines.push("—", options.recipientNote ?? defaultRecipientNote(options.publicationName));
   return lines.join("\n");
 }

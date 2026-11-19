@@ -24,10 +24,10 @@ export default async function LetterAnalyticsPage({ params }: { params: Promise<
         title={row.headline || "Untitled letter"}
         description={
           <>
-            <Link href="/analytics" className="hover:text-ink hover:underline">
-              Analytics
+            <Link href="/letters" className="hover:text-ink hover:underline">
+              Letters
             </Link>{" "}
-            / {formatShortCalendarDate(row.date)}
+            / Analytics · {formatShortCalendarDate(row.date)}
           </>
         }
         actions={
@@ -62,11 +62,6 @@ export default async function LetterAnalyticsPage({ params }: { params: Promise<
                   ? `${(row.clicks / row.uniqueClickers).toFixed(1)} per clicker`
                   : "No clicks yet"
               }
-            />
-            <StatTile
-              label="Unsubscribes"
-              value={count(row.unsubscribes)}
-              detail={`${percent(row.unsubscribes, row.delivered)} of delivered`}
             />
           </StatRow>
 

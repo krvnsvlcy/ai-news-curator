@@ -16,3 +16,12 @@ export function getAuthConfig(): AuthConfig {
   }
   return { password, secret };
 }
+
+/**
+ * Optional hint shown on the login page (AUTH_PASSWORD_HINT). Anyone who can
+ * open the login page can read it, so never put the password itself here.
+ */
+export function getPasswordHint(): string | undefined {
+  const hint = process.env.AUTH_PASSWORD_HINT?.trim();
+  return hint ? hint.slice(0, 200) : undefined;
+}

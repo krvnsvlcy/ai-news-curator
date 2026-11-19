@@ -2,9 +2,9 @@
 
 import { type FormEvent, useState } from "react";
 import { buttonClass } from "@/components/button-styles";
+import { Modal } from "@/components/modal";
 import type { EditorStory } from "@/lib/letters";
 import { inputClass, labelClass } from "./fields";
-import { Modal } from "./modal";
 
 const EMPTY = { url: "", title: "", sourceName: "", headline: "", description: "" };
 
@@ -101,7 +101,7 @@ export function ExternalStoryDialog({
           />
         </label>
         {error && (
-          <p role="alert" className="text-[12.5px] text-red-600 dark:text-red-400">
+          <p role="alert" className="text-[12.5px] text-red-600">
             {error}
           </p>
         )}

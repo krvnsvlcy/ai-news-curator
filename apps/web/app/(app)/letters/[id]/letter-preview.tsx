@@ -1,6 +1,10 @@
 "use client";
 
-import { type NewsletterOptions, renderLetterHtml } from "@curator/newsletter";
+import {
+  type NewsletterOptions,
+  removeLegacySubscriptionLinks,
+  renderLetterHtml,
+} from "@curator/newsletter";
 import { useDeferredValue, useMemo, useState } from "react";
 import { type EditorLetterContent, toNewsletterLetter } from "@/lib/letters";
 
@@ -21,12 +25,9 @@ export function LetterPreview({
   const deferred = useDeferredValue(letter);
   const html = useMemo(
     () =>
-      publishedHtml ??
-      renderLetterHtml(toNewsletterLetter(deferred), {
-        ...newsletter,
-        manageUrl: "#",
-        unsubscribeUrl: "#",
-      }),
+      publishedHtml
+        ? removeLegacySubscriptionLinks(publishedHtml)
+        : renderLetterHtml(toNewsletterLetter(deferred), newsletter),
     [deferred, newsletter, publishedHtml],
   );
 
@@ -47,14 +48,14 @@ export function LetterPreview({
               type="button"
               aria-pressed={device === d}
               onClick={() => setDevice(d)}
-              className="rounded px-2 py-0.5 text-[12px] text-muted capitalize aria-pressed:bg-ink aria-pressed:text-paper"
+              className="rounded-sm px-2 py-0.5 text-[12px] text-muted capitalize aria-pressed:bg-ink aria-pressed:text-paper"
             >
               {d}
             </button>
           ))}
         </fieldset>
       </div>
-      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-[#e9e7e1] dark:bg-[#0d0d0d]">
+      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-[#e9e7e1]">
         <iframe
           title="Email preview"
           srcDoc={html}

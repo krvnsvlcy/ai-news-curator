@@ -15,14 +15,18 @@ export default async function NewSourcePage() {
         title="New source"
         description={
           <>
-            <Link href="/sources" className="hover:text-ink hover:underline">
+            <Link href="/settings" className="hover:text-ink hover:underline">
+              Settings
+            </Link>{" "}
+            /{" "}
+            <Link href="/settings/sources" className="hover:text-ink hover:underline">
               Sources
             </Link>{" "}
             / New
           </>
         }
       />
-      <PageBody narrow>
+      <PageBody>
         <SourceForm
           action={saveSource.bind(null, null)}
           initial={EMPTY_SOURCE}

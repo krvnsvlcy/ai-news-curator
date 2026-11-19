@@ -48,7 +48,7 @@ describe.skipIf(!url)("email events & analytics (integration)", () => {
     await db.closeDb();
   });
 
-  it("aggregates sends, clicks, unique clickers and unsubscribes, excluding tests", async () => {
+  it("aggregates sends, clicks and unique clickers, excluding tests", async () => {
     const click = (storyId: string, recipient: string, test = false) =>
       db.recordClick({ letterId, storyId, recipient, test });
     await click("a", "r1");
@@ -56,9 +56,15 @@ describe.skipIf(!url)("email events & analytics (integration)", () => {
     await click("a", "r2");
     await click("b", "r1");
     await click("c", "tester", true); // test send: ignored
-    await db.recordUnsubscribe({ letterId, recipient: "r3", test: false });
-    await db.recordUnsubscribe({ letterId, recipient: "r3", test: false }); // deduped
-    await db.recordUnsubscribe({ letterId, recipient: "tester", test: true }); // ignored
+    // Unsubscribe events from before the feature was removed are ignored.
+    const { events } = await db.collections();
+    await events.insertOne({
+      type: "unsubscribe",
+      letterId: new db.ObjectId(letterId),
+      recipient: "r3",
+      test: false,
+      at: new Date(),
+    });
 
     const [row] = await db.listLetterAnalytics();
     expect(row).toMatchObject({
@@ -69,7 +75,6 @@ describe.skipIf(!url)("email events & analytics (integration)", () => {
       failed: 1,
       clicks: 4,
       uniqueClickers: 2,
-      unsubscribes: 1,
     });
 
     const detail = await db.letterAnalytics(letterId);
@@ -95,7 +100,6 @@ describe.skipIf(!url)("email events & analytics (integration)", () => {
       submitted: 5,
       clicks: 4,
       uniqueClickers: 2,
-      unsubscribes: 1,
     });
   });
 

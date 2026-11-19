@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
+import { Modal } from "@/components/modal";
 import { formatDateTime, timeAgo } from "@/lib/format";
 import type { PickerArticle } from "@/lib/letters";
 import { searchArticlesAction } from "../actions";
 import { inputClass } from "./fields";
-import { Modal } from "./modal";
 
 export function ArticlePicker({
   open,
@@ -43,7 +43,7 @@ export function ArticlePicker({
       open={open}
       onClose={onClose}
       title="Add stories from the feed"
-      wide
+      size="lg"
       footer={
         <div className="flex items-center justify-between">
           <span className="text-[12.5px] text-muted">{selectedArticleIds.size} in this letter</span>

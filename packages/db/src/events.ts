@@ -4,6 +4,7 @@ import { collections } from "./client.js";
 /** Anonymous engagement event from a sent email. Never contains an address. */
 export interface EmailEventDoc {
   _id: ObjectId;
+  /** Only clicks are recorded now; older "unsubscribe" events are ignored. */
   type: "click" | "unsubscribe";
   letterId: ObjectId;
   /** Story clicked (clicks only). */
@@ -33,26 +34,11 @@ export async function recordClick(e: {
   });
 }
 
-/** Counted once per reader per letter, however many times they confirm. */
-export async function recordUnsubscribe(e: {
-  letterId: string;
-  recipient: string;
-  test: boolean;
-}): Promise<void> {
-  const { events } = await collections();
-  await events.updateOne(
-    { type: "unsubscribe", letterId: new ObjectId(e.letterId), recipient: e.recipient },
-    { $setOnInsert: { _id: new ObjectId(), test: e.test, at: new Date() } },
-    { upsert: true },
-  );
-}
-
 // ── Analytics ────────────────────────────────────────────────────────────────
 
 export interface EngagementTotals {
   clicks: number;
   uniqueClickers: number;
-  unsubscribes: number;
 }
 
 export interface SendTotals {
@@ -101,25 +87,19 @@ function sendTotals(
 async function engagementByLetter(letterIds?: ObjectId[]) {
   const { events } = await collections();
   const rows = await events
-    .aggregate<{ _id: ObjectId; clicks: number; clickers: string[]; unsubscribes: number }>([
-      { $match: { ...real, ...(letterIds ? { letterId: { $in: letterIds } } : {}) } },
+    .aggregate<{ _id: ObjectId; clicks: number; clickers: string[] }>([
       {
-        $group: {
-          _id: "$letterId",
-          clicks: { $sum: { $cond: [{ $eq: ["$type", "click"] }, 1, 0] } },
-          clickers: {
-            $addToSet: { $cond: [{ $eq: ["$type", "click"] }, "$recipient", "$$REMOVE"] },
-          },
-          unsubscribes: { $sum: { $cond: [{ $eq: ["$type", "unsubscribe"] }, 1, 0] } },
+        $match: {
+          ...real,
+          type: "click",
+          ...(letterIds ? { letterId: { $in: letterIds } } : {}),
         },
       },
+      { $group: { _id: "$letterId", clicks: { $sum: 1 }, clickers: { $addToSet: "$recipient" } } },
     ])
     .toArray();
   return new Map(
-    rows.map((r) => [
-      r._id.toHexString(),
-      { clicks: r.clicks, uniqueClickers: r.clickers.length, unsubscribes: r.unsubscribes },
-    ]),
+    rows.map((r) => [r._id.toHexString(), { clicks: r.clicks, uniqueClickers: r.clickers.length }]),
   );
 }
 
@@ -149,7 +129,7 @@ export async function listLetterAnalytics(): Promise<LetterAnalyticsRow[]> {
     date: l.date,
     status: l.status,
     ...sendTotals(l.sends as never),
-    ...(engagement.get(l._id.toHexString()) ?? { clicks: 0, uniqueClickers: 0, unsubscribes: 0 }),
+    ...(engagement.get(l._id.toHexString()) ?? { clicks: 0, uniqueClickers: 0 }),
   }));
 }
 
@@ -175,7 +155,6 @@ export async function analyticsOverview(): Promise<
     failed: sum("failed"),
     clicks: sum("clicks"),
     uniqueClickers: unique?.n ?? 0,
-    unsubscribes: sum("unsubscribes"),
   };
 }
 
@@ -253,7 +232,6 @@ export async function letterAnalytics(id: string): Promise<{
   const engagement = (await engagementByLetter([letter._id])).get(id) ?? {
     clicks: 0,
     uniqueClickers: 0,
-    unsubscribes: 0,
   };
   const clicks = new Map(
     (await storyClicks({ letterId: letter._id })).map((r) => [r._id.storyId, r]),

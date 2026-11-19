@@ -1,38 +1,36 @@
 @import "tailwindcss";
 
-/* Internal-tool palette: neutral surfaces, one green accent for healthy states. */
+/* Brand palette: Mirage ink, Wild Sand canvas, Blaze Orange accent,
+   Deep Sea Green for healthy states. Orange is 3.1:1 on white: use it for
+   fills, dots and bars, not small text. */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+
+  /* Corners: buttons 12px; cards, panels and the main area 14px. */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
 
   --color-paper: #ffffff;
-  --color-canvas: #fafafa;
-  --color-sidebar: #f6f6f5;
-  --color-ink: #1f1f1f;
-  --color-muted: #6b6b6b;
-  --color-rule: #e7e7e5;
-  --color-chip: #efefed;
-  --color-hover: #ececea;
-  --color-accent: #1a8917;
-  /* Data series (validated: dataviz validate_palette, light #fff / dark #191919). */
-  --color-series-1: #2a78d6;
+  /* The main content card: a step lighter than the canvas it sits on. */
+  --color-surface: #f4f8f9;
+  --color-canvas: #e4eef0;
+  --color-ink: #16232a;
+  --color-muted: #56656b;
+  --color-rule: #cfdde1;
+  --color-chip: #dce8eb;
+  --color-hover: #d5e3e7;
+  --color-orange: #ff5b04;
+  --color-sea: #075056;
+  --color-primary: var(--color-sea);
+  --color-primary-hover: #053e43;
+  --color-accent: var(--color-orange);
+  --color-series-1: var(--color-orange);
 }
 
 @layer base {
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --color-paper: #191919;
-      --color-canvas: #121212;
-      --color-sidebar: #161616;
-      --color-ink: #e8e8e8;
-      --color-muted: #9b9b9b;
-      --color-rule: #2a2a2a;
-      --color-chip: #252525;
-      --color-hover: #222222;
-      --color-accent: #4caf50;
-      --color-series-1: #3987e5;
-    }
-  }
-
   html {
     -webkit-font-smoothing: antialiased;
   }
@@ -43,5 +41,17 @@
 
   ::selection {
     background: color-mix(in oklab, var(--color-accent) 25%, transparent);
+  }
+}
+
+/* New highlights settling into the live draft (New letter walkthrough). */
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef } from "react";
-import { CloseIcon } from "@/components/icons";
+import { CloseIcon } from "./icons";
 
 /** Native <dialog> modal: focus trapping, Escape and backdrop come from the browser. */
 export function Modal({
@@ -10,14 +10,15 @@ export function Modal({
   title,
   children,
   footer,
-  wide,
+  size = "md",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  wide?: boolean;
+  /** md: forms and confirmations; lg: lists; xl: multi-step flows. */
+  size?: "md" | "lg" | "xl";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -33,7 +34,7 @@ export function Modal({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className={`m-auto max-h-[85dvh] w-[calc(100%-2rem)] ${wide ? "max-w-2xl" : "max-w-lg"} overflow-hidden rounded-xl border border-rule bg-paper p-0 text-ink shadow-2xl backdrop:bg-black/40`}
+      className={`m-auto max-h-[85dvh] w-[calc(100%-2rem)] ${{ md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size]} overflow-hidden rounded-xl border border-rule bg-paper p-0 text-ink shadow-2xl backdrop:bg-black/40`}
     >
       {open && (
         <div className="flex max-h-[85dvh] flex-col">

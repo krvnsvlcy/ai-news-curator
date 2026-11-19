@@ -1,26 +1,11 @@
-import { escapeHtml, MERGE_TAGS } from "./render.js";
+// Letters published with template v1 were archived with a footer of
+// subscription links as merge tags ({{manage_url}}, {{unsubscribe_url}}).
+// Subscribers are now managed by the editor only, so re-sends drop that footer.
 
-export interface RecipientLinks {
-  manageUrl: string;
-  unsubscribeUrl: string;
-}
+const LEGACY_LINKS =
+  /\s*<p\b[^>]*>\s*<a href="\{\{manage_url\}\}"[\s\S]*?\{\{unsubscribe_url\}\}[\s\S]*?<\/p>/g;
 
-function assertHttp(url: string) {
-  if (!/^https?:\/\//i.test(url)) throw new Error(`Recipient links must be http(s) URLs: ${url}`);
-}
-
-/** Fills the subscription merge tags in rendered HTML (values are attribute-escaped). */
-export function personalizeHtml(html: string, links: RecipientLinks): string {
-  assertHttp(links.manageUrl);
-  assertHttp(links.unsubscribeUrl);
-  return html
-    .replaceAll(MERGE_TAGS.manageUrl, escapeHtml(links.manageUrl))
-    .replaceAll(MERGE_TAGS.unsubscribeUrl, escapeHtml(links.unsubscribeUrl));
-}
-
-/** Fills the subscription merge tags in the plain-text part. */
-export function personalizeText(text: string, links: RecipientLinks): string {
-  return text
-    .replaceAll(MERGE_TAGS.manageUrl, links.manageUrl)
-    .replaceAll(MERGE_TAGS.unsubscribeUrl, links.unsubscribeUrl);
+/** Removes v1 subscription links from archived HTML; anything else is returned as-is. */
+export function removeLegacySubscriptionLinks(html: string): string {
+  return html.replace(LEGACY_LINKS, "");
 }

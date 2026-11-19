@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation } from "mongodb";
+import { type AnyBulkWriteOperation, ObjectId } from "mongodb";
 import { collections } from "./client.js";
 import type { ArticleDoc, ArticleInput, SourceDoc } from "./schema.js";
 
@@ -104,4 +104,59 @@ export async function searchArticles({
     .sort({ publishedAt: -1, _id: -1 })
     .limit(Math.min(Math.max(limit, 1), 100))
     .toArray();
+}
+
+/** Minutes London is ahead of UTC at `at` (0 in winter, 60 in summer). */
+function londonOffsetMinutes(at: Date): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London",
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value]),
+  );
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return Math.round((asUtc - at.getTime()) / 60000);
+}
+
+/** The instant a London calendar day (YYYY-MM-DD) starts. UK clocks change at 1am, never at midnight. */
+export function londonMidnight(day: string): Date {
+  const utcMidnight = new Date(`${day}T00:00:00Z`);
+  return new Date(utcMidnight.getTime() - londonOffsetMinutes(utcMidnight) * 60000);
+}
+
+/** Articles published during a London calendar day, newest first. */
+export async function listArticlesForDay(day: string, limit = 150): Promise<ArticleDoc[]> {
+  const start = londonMidnight(day);
+  const next = new Date(`${day}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  const end = londonMidnight(next.toISOString().slice(0, 10));
+  const { articles } = await collections();
+  return articles
+    .find({ publishedAt: { $gte: start, $lt: end } })
+    .sort({ publishedAt: -1 })
+    .limit(limit)
+    .toArray();
+}
+
+/** Articles by id (hex strings); unknown or malformed ids are skipped. */
+export async function getArticlesByIds(ids: string[]): Promise<ArticleDoc[]> {
+  const valid = ids.filter((id) => /^[0-9a-f]{24}$/.test(id)).map((id) => new ObjectId(id));
+  if (!valid.length) return [];
+  const { articles } = await collections();
+  return articles.find({ _id: { $in: valid } }).toArray();
 }

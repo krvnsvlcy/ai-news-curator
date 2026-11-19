@@ -1,6 +1,6 @@
 export { ObjectId } from "mongodb";
 export * from "./articles.js";
-export { closeDb, collections, getDb } from "./client.js";
+export { closeDb, collections, getDb, migrateSubscribers } from "./client.js";
 export * from "./config.js";
 export * from "./defaults.js";
 export * from "./events.js";
@@ -8,3 +8,5 @@ export * from "./letter-schema.js";
 export * from "./letters.js";
 export * from "./schema.js";
 export * from "./sources.js";
+export * from "./stats.js";
+export * from "./subscribers.js";

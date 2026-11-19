@@ -15,7 +15,7 @@ export interface BarListRow {
 
 /**
  * One series of magnitudes as aligned horizontal bars: a name, a bar and a figure
- * per row. Thin 8px bars, rounded at the data end and square at the baseline; the
+ * per row. Thin 8px bars, rounded-sm at the data end and square at the baseline; the
  * figure is always printed, so the bar is never the only way to read the value.
  */
 export function BarList({

@@ -20,3 +20,14 @@ export function rewriteStoryLinks(
   }
   return out;
 }
+
+/**
+ * Adds a 1×1 open-tracking image just before </body> (or at the end). Opens are
+ * approximate: some clients block images, and some (e.g. Apple Mail Privacy
+ * Protection) fetch them without the reader opening the email.
+ */
+export function addOpenPixel(html: string, pixelUrl: string): string {
+  const img = `<img src="${escapeHtmlAttr(pixelUrl)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;opacity:0;" />`;
+  const i = html.lastIndexOf("</body>");
+  return i === -1 ? html + img : html.slice(0, i) + img + html.slice(i);
+}

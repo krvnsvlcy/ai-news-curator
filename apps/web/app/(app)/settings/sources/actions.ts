@@ -86,8 +86,8 @@ function fieldFor(path: PropertyKey[]): keyof SourceFormValues | "form" {
 }
 
 function revalidate() {
-  revalidatePath("/sources", "layout");
-  revalidatePath("/");
+  revalidatePath("/settings/sources", "layout");
+  revalidatePath("/feed");
 }
 
 export async function saveSource(
@@ -119,14 +119,14 @@ export async function saveSource(
   }
 
   revalidate();
-  redirect("/sources");
+  redirect("/settings/sources");
 }
 
 export async function deleteSourceAction(id: string): Promise<void> {
   await requireSession();
   await deleteSource(id);
   revalidate();
-  redirect("/sources");
+  redirect("/settings/sources");
 }
 
 export async function toggleSourceAction(id: string, enabled: boolean): Promise<void> {

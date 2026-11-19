@@ -22,12 +22,18 @@ export default async function SourcesPage() {
       <PageHeader
         title="Sources"
         description={
-          sources.length === 0
-            ? "Where stories come from."
-            : `${sources.filter((s) => s.enabled).length} active of ${sources.length}${failing ? ` · ${failing} failing` : ""}`
+          <>
+            <Link href="/settings" className="hover:text-ink hover:underline">
+              Settings
+            </Link>{" "}
+            /{" "}
+            {sources.length === 0
+              ? "Where stories come from."
+              : `${sources.filter((s) => s.enabled).length} active of ${sources.length}${failing ? ` · ${failing} failing` : ""}`}
+          </>
         }
         actions={
-          <Link href="/sources/new" className={buttonClass("primary")}>
+          <Link href="/settings/sources/new" className={buttonClass("primary")}>
             <PlusIcon className="size-4" /> New source
           </Link>
         }
@@ -88,16 +94,16 @@ function SourceRow({ source: s, articleCount }: { source: SourceDoc; articleCoun
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Link
-              href={`/sources/${id}`}
+              href={`/settings/sources/${id}`}
               className="truncate text-[14.5px] font-medium hover:underline"
             >
               {s.name}
             </Link>
-            <span className="rounded bg-chip px-1.5 py-0.5 text-[11px] font-medium text-muted uppercase">
+            <span className="rounded-sm bg-chip px-1.5 py-0.5 text-[11px] font-medium text-muted uppercase">
               {s.config.kind === "feed" ? "RSS" : "API"}
             </span>
             {!s.enabled && (
-              <span className="rounded border border-rule px-1.5 py-0.5 text-[11px] text-muted">
+              <span className="rounded-sm border border-rule px-1.5 py-0.5 text-[11px] text-muted">
                 Paused
               </span>
             )}
@@ -111,7 +117,7 @@ function SourceRow({ source: s, articleCount }: { source: SourceDoc; articleCoun
           </div>
 
           <div className="text-[13px] md:text-right">
-            <Link href={`/?source=${s.slug}`} className="tabular-nums hover:underline">
+            <Link href={`/feed?source=${s.slug}`} className="tabular-nums hover:underline">
               {articleCount.toLocaleString("en-GB")}
               <span className="text-muted md:hidden"> stories</span>
             </Link>
@@ -135,7 +141,7 @@ function SourceRow({ source: s, articleCount }: { source: SourceDoc; articleCoun
       </div>
 
       {s.lastStatus === "error" && s.lastError && (
-        <p className="mt-2.5 rounded-md border border-red-600/20 bg-red-50 px-3 py-2 text-[12.5px] text-red-700 dark:bg-red-950/30 dark:text-red-300">
+        <p className="mt-2.5 rounded-md border border-red-600/20 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">
           {s.lastError}
         </p>
       )}
@@ -158,7 +164,7 @@ function Status({ source: s }: { source: SourceDoc }) {
   );
   if (s.lastStatus === "error") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-red-700 dark:text-red-400">
+      <span className="inline-flex items-center gap-1.5 text-red-700">
         <Dot className="bg-red-600" />
         <span>Failed {when}</span>
       </span>

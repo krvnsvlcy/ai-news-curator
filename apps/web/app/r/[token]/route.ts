@@ -1,4 +1,4 @@
-import { recordClick, storyUrl } from "@curator/db";
+import { recordClick, recordClickStat, storyUrl } from "@curator/db";
 import { after } from "next/server";
 import { getTracker } from "@/lib/tracking";
 
@@ -15,12 +15,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
   // Don't make the reader wait for the write.
   after(() =>
-    recordClick({
-      letterId: payload.letterId,
-      storyId: payload.storyId,
-      recipient: payload.recipient,
-      test: payload.test,
-    }).catch((err) => console.error("[tracking] failed to record click", err)),
+    Promise.all([
+      recordClick({
+        letterId: payload.letterId,
+        storyId: payload.storyId,
+        recipient: payload.recipient,
+        test: payload.test,
+      }),
+      recordClickStat({
+        letterId: payload.letterId,
+        recipient: payload.recipient,
+        test: payload.test,
+      }),
+    ]).catch((err) => console.error("[tracking] failed to record click", err)),
   );
 
   return new Response(null, {

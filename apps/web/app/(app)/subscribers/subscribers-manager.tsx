@@ -1,127 +1,136 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
-import { ExternalIcon, TrashIcon } from "@/components/icons";
-import { LocalStorageNotice } from "@/components/local-storage-notice";
+import { TrashIcon } from "@/components/icons";
 import { Panel } from "@/components/page";
 import { formatDateTime, timeAgo } from "@/lib/format";
+import { count } from "@/lib/metrics";
+import { clearLegacySubscribers, readLegacySubscribers, type Subscriber } from "@/lib/subscribers";
 import {
-  addManySubscribers,
-  addSubscriber,
-  clearSubscribers,
-  removeSubscriber,
-  type SubscriberStatus,
-  setSubscriberStatus,
-  storageAvailable,
-  useSubscribers,
-} from "@/lib/subscribers";
+  addManySubscribersAction,
+  addSubscriberAction,
+  clearSubscribersAction,
+  importLegacySubscribersAction,
+  removeSubscriberAction,
+} from "./actions";
 
 const input =
   "block w-full rounded-md border border-rule bg-paper px-3 py-1.5 text-[14px] outline-none transition-colors placeholder:text-muted/60 focus:border-ink";
 
-type Filter = "all" | SubscriberStatus;
-
-export function SubscribersManager() {
-  const { subscribers, ready } = useSubscribers();
+export function SubscribersManager({
+  subscribers,
+  total,
+}: {
+  /** Only the subscribers on this browser's list. */
+  subscribers: Subscriber[];
+  /** Subscribers across everyone (a count only). */
+  total: number;
+}) {
+  const [pending, start] = useTransition();
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulk, setBulk] = useState("");
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string }>();
-  const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
 
-  const counts = useMemo(
-    () => ({
-      all: subscribers.length,
-      active: subscribers.filter((s) => s.status === "active").length,
-      unsubscribed: subscribers.filter((s) => s.status === "unsubscribed").length,
-    }),
-    [subscribers],
-  );
+  // One-time move of the list this browser used to keep in localStorage.
+  const imported = useRef(false);
+  useEffect(() => {
+    if (imported.current) return;
+    imported.current = true;
+    const legacy = readLegacySubscribers();
+    if (legacy.length === 0) return;
+    start(async () => {
+      const res = await importLegacySubscribersAction(legacy);
+      if (!res.ok) return;
+      clearLegacySubscribers();
+      if (res.moved === 0) return;
+      setMessage({
+        kind: "ok",
+        text: `Moved ${res.moved} ${res.moved === 1 ? "subscriber" : "subscribers"} from this browser's storage to the database.`,
+      });
+    });
+  }, []);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return [...subscribers]
-      .filter((s) => filter === "all" || s.status === filter)
-      .filter((s) => !q || s.email.includes(q) || s.name?.toLowerCase().includes(q))
+      .filter((s) => !q || s.email.includes(q))
       .sort((a, b) => b.subscribedAt.localeCompare(a.subscribedAt));
-  }, [subscribers, filter, query]);
+  }, [subscribers, query]);
 
   function onAdd(e: FormEvent) {
     e.preventDefault();
-    const outcome = addSubscriber(email, { name, source: "dashboard" });
-    const text = {
-      added: `Added ${email.trim()}.`,
-      reactivated: `${email.trim()} was unsubscribed and is now active again.`,
-      exists: `${email.trim()} is already subscribed.`,
-      invalid: "Enter a valid email address.",
-      "storage-error": "This browser blocked local storage, so the subscriber couldn't be saved.",
-    }[outcome];
-    setMessage({ kind: outcome === "added" || outcome === "reactivated" ? "ok" : "error", text });
-    if (outcome === "added" || outcome === "reactivated") {
-      setEmail("");
-      setName("");
-    }
+    const shown = email.trim();
+    start(async () => {
+      const outcome = await addSubscriberAction(email);
+      const text = {
+        added: `Added ${shown}.`,
+        linked: `${shown} was already subscribed, so it's been added to your list.`,
+        exists: `${shown} is already on your list.`,
+        invalid: "Enter a valid email address.",
+      }[outcome];
+      const ok = outcome === "added" || outcome === "linked";
+      setMessage({ kind: ok ? "ok" : "error", text });
+      if (ok) {
+        setEmail("");
+      }
+    });
   }
 
   function onBulk(e: FormEvent) {
     e.preventDefault();
-    const r = addManySubscribers(bulk);
-    const parts = [`Added ${r.added}`];
-    if (r.skipped) parts.push(`${r.skipped} already subscribed`);
-    if (r.invalid.length)
-      parts.push(
-        `${r.invalid.length} invalid (${r.invalid.slice(0, 3).join(", ")}${r.invalid.length > 3 ? "…" : ""})`,
-      );
-    setMessage({
-      kind: r.invalid.length && !r.added ? "error" : "ok",
-      text: `${parts.join(" · ")}.`,
+    start(async () => {
+      const r = await addManySubscribersAction(bulk);
+      if (r.tooMany) {
+        setMessage({ kind: "error", text: "Paste at most 500 addresses at a time." });
+        return;
+      }
+      const parts = [`Added ${r.added}`];
+      if (r.skipped) parts.push(`${r.skipped} already on your list`);
+      if (r.invalid.length)
+        parts.push(
+          `${r.invalid.length} invalid (${r.invalid.slice(0, 3).join(", ")}${r.invalid.length > 3 ? "…" : ""})`,
+        );
+      setMessage({
+        kind: r.invalid.length && !r.added ? "error" : "ok",
+        text: `${parts.join(" · ")}.`,
+      });
+      if (r.added) {
+        setBulk("");
+        setBulkOpen(false);
+      }
     });
-    if (r.added) {
-      setBulk("");
-      setBulkOpen(false);
-    }
   }
 
-  if (ready && !storageAvailable()) {
-    return (
-      <p
-        role="alert"
-        className="rounded-md border border-red-600/20 bg-red-50 px-3 py-2.5 text-[13px] text-red-800"
-      >
-        This browser isn't allowing local storage (private window or blocked site data), so the demo
-        subscriber list can't be kept here. Open the app in a regular window to manage subscribers.
-      </p>
-    );
+  function act(fn: () => Promise<unknown>) {
+    start(async () => {
+      await fn();
+    });
   }
 
   return (
     <div className="space-y-5">
-      <LocalStorageNotice />
+      <p className="text-[13px] text-muted">
+        Subscribers are saved on the server, one per address, and only editors add or remove them.
+        You see and manage only those on your list (added from this browser); there{" "}
+        {total === 1 ? "is" : "are"} {count(total)} across everyone. Letters you send go to everyone
+        on your list.
+      </p>
 
       <Panel>
         <div className="p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-[14px] font-semibold">Add subscribers</h2>
-            <div className="flex items-center gap-1">
-              <a
-                href="/subscribe"
-                target="_blank"
-                rel="noreferrer"
-                className={buttonClass("quiet")}
-              >
-                Public signup page <ExternalIcon className="size-3.5" />
-              </a>
-              <button
-                type="button"
-                onClick={() => setBulkOpen((o) => !o)}
-                aria-expanded={bulkOpen}
-                className={buttonClass("quiet")}
-              >
-                {bulkOpen ? "Add one" : "Paste a list"}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setBulkOpen((o) => !o)}
+              aria-expanded={bulkOpen}
+              className={buttonClass("quiet")}
+            >
+              {bulkOpen ? "Add one" : "Paste a list"}
+            </button>
           </div>
 
           {bulkOpen ? (
@@ -134,7 +143,11 @@ export function SubscribersManager() {
                 placeholder="One per line, or separated by commas"
                 className={`${input} resize-y`}
               />
-              <button type="submit" className={buttonClass("primary")} disabled={!bulk.trim()}>
+              <button
+                type="submit"
+                className={buttonClass("primary")}
+                disabled={!bulk.trim() || pending}
+              >
                 Add addresses
               </button>
             </form>
@@ -149,19 +162,10 @@ export function SubscribersManager() {
                 autoComplete="off"
                 className={input}
               />
-              <input
-                aria-label="Name (optional)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Name (optional)"
-                autoComplete="off"
-                maxLength={100}
-                className={`${input} sm:w-56`}
-              />
               <button
                 type="submit"
                 className={`${buttonClass("primary")} sm:w-28`}
-                disabled={!email.trim()}
+                disabled={!email.trim() || pending}
               >
                 Add
               </button>
@@ -170,7 +174,7 @@ export function SubscribersManager() {
           {message && (
             <p
               role={message.kind === "error" ? "alert" : "status"}
-              className={`mt-2 text-[12.5px] ${message.kind === "error" ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}
+              className={`mt-2 text-[12.5px] ${message.kind === "error" ? "text-red-600" : "text-sea"}`}
             >
               {message.text}
             </p>
@@ -179,19 +183,10 @@ export function SubscribersManager() {
       </Panel>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Filter subscribers" className="flex flex-wrap gap-1.5">
-          {(["all", "active", "unsubscribed"] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              aria-pressed={filter === f}
-              onClick={() => setFilter(f)}
-              className="rounded-md border border-rule bg-paper px-2.5 py-1 text-[13px] text-muted capitalize transition-colors hover:text-ink aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper"
-            >
-              {f} <span className="tabular-nums opacity-70">{counts[f]}</span>
-            </button>
-          ))}
-        </nav>
+        <h2 className="text-[14px] font-semibold">
+          Your list{" "}
+          <span className="font-normal text-muted tabular-nums">{count(subscribers.length)}</span>
+        </h2>
         <div className="flex items-center gap-2">
           <input
             type="search"
@@ -204,9 +199,11 @@ export function SubscribersManager() {
           {subscribers.length > 0 && (
             <button
               type="button"
+              disabled={pending}
               onClick={() =>
-                confirm(`Remove all ${subscribers.length} subscribers from this browser?`) &&
-                clearSubscribers()
+                confirm(
+                  `Remove all ${subscribers.length} addresses from your list? Other lists keep theirs.`,
+                ) && act(clearSubscribersAction)
               }
               className={buttonClass("quiet")}
             >
@@ -217,9 +214,7 @@ export function SubscribersManager() {
       </div>
 
       <Panel>
-        {!ready ? (
-          <p className="px-5 py-10 text-center text-[13px] text-muted">Loading…</p>
-        ) : visible.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="text-[14px] font-medium">
               {subscribers.length === 0 ? "No subscribers yet" : "No subscribers match"}
@@ -227,7 +222,7 @@ export function SubscribersManager() {
             <p className="mt-1 text-[13px] text-muted">
               {subscribers.length === 0
                 ? "Add your own address (or a test inbox) to try sending a letter."
-                : "Try another filter or search."}
+                : "Try another search."}
             </p>
           </div>
         ) : (
@@ -238,43 +233,29 @@ export function SubscribersManager() {
                 className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
               >
                 <div className="min-w-0 flex-1">
-                  <p
-                    className={`truncate text-[14px] font-medium ${s.status === "unsubscribed" ? "text-muted line-through decoration-1" : ""}`}
-                  >
-                    {s.email}
-                  </p>
+                  <p className="truncate text-[14px] font-medium">{s.email}</p>
                   <p className="text-[12.5px] text-muted">
-                    {s.name && <>{s.name} · </>}
-                    {s.status === "active" ? "Subscribed" : "Unsubscribed"}{" "}
+                    Added{" "}
                     <time
-                      dateTime={s.unsubscribedAt ?? s.subscribedAt}
-                      title={formatDateTime(new Date(s.unsubscribedAt ?? s.subscribedAt))}
+                      dateTime={s.subscribedAt}
+                      title={formatDateTime(new Date(s.subscribedAt))}
                     >
-                      {timeAgo(new Date(s.unsubscribedAt ?? s.subscribedAt))}
+                      {timeAgo(new Date(s.subscribedAt))}
                     </time>
-                    {s.source === "signup" && " · via signup page"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSubscriberStatus(s.id, s.status === "active" ? "unsubscribed" : "active")
-                    }
-                    className={`${buttonClass("secondary")} w-28`}
-                  >
-                    {s.status === "active" ? "Unsubscribe" : "Resubscribe"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeSubscriber(s.id)}
-                    aria-label={`Remove ${s.email}`}
-                    title="Remove"
-                    className={`${buttonClass("quiet")} px-2`}
-                  >
-                    <TrashIcon className="size-4" />
-                  </button>
-                </div>
+                {/* Removing is how you unsubscribe someone: it drops your reference
+                    only, and the address is deleted once no list has it. */}
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => act(() => removeSubscriberAction(s.id))}
+                  aria-label={`Remove ${s.email} from your list`}
+                  title="Remove from your list. Letters you send won't go to this address."
+                  className={`${buttonClass("secondary")} self-start sm:self-auto`}
+                >
+                  <TrashIcon className="size-4" /> Remove
+                </button>
               </li>
             ))}
           </ul>

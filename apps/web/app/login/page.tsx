@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { Wordmark } from "@/components/wordmark";
+import { EditorialWordmark } from "@/components/editorial";
+import { getPasswordHint } from "@/lib/auth/config";
 import { isAuthenticated, safeRedirectPath } from "@/lib/auth/session";
 import { LoginForm } from "./login-form";
 
@@ -14,14 +15,12 @@ export default async function LoginPage({
   if (await isAuthenticated()) redirect(safeRedirectPath(from));
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm">
-        <Wordmark className="justify-center" />
-        <div className="mt-8 rounded-lg border border-rule bg-paper p-6">
-          <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
-          <p className="mt-1 text-[13px] text-muted">Enter the team password to continue.</p>
-          <LoginForm from={safeRedirectPath(from)} />
-        </div>
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-4 py-16">
+      <div className="w-full max-w-sm text-center">
+        <EditorialWordmark className="text-3xl" />
+        <h1 className="mt-10 font-serif text-[32px] leading-tight tracking-tight">Welcome back.</h1>
+        <p className="mt-3 font-serif text-lg text-muted">Enter the team password to continue.</p>
+        <LoginForm from={safeRedirectPath(from)} hint={getPasswordHint()} />
       </div>
     </main>
   );

@@ -5,20 +5,20 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 // a token or anywhere server-side; the recipient id is a keyed hash, so it
 // can't be reversed or brute-forced without the secret.
 
-export type TokenKind = "click" | "unsubscribe";
+export type TokenKind = "click" | "open";
 
 export interface TrackingPayload {
   kind: TokenKind;
   letterId: string;
-  /** Story id for clicks; empty for unsubscribes. */
+  /** Story id for clicks; empty for opens. */
   storyId: string;
   recipient: string;
   /** True for test sends, which are excluded from analytics. */
   test: boolean;
 }
 
-const KIND_CODE: Record<TokenKind, string> = { click: "c", unsubscribe: "u" };
-const CODE_KIND: Record<string, TokenKind> = { c: "click", u: "unsubscribe" };
+const KIND_CODE: Record<TokenKind, string> = { click: "c", open: "o" };
+const CODE_KIND: Record<string, TokenKind> = { c: "click", o: "open" };
 
 export class Tracker {
   private readonly key: Buffer;

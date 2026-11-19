@@ -28,7 +28,8 @@ export function DeleteLetterButton({
         onClick={() => {
           if (!confirm(`Delete the draft “${label}”? This can’t be undone.`)) return;
           startTransition(async () => {
-            const res = await deleteLetterAction(id);
+            // A compact button sits in a list: stay there once the row is gone.
+            const res = await deleteLetterAction(id, { stay: compact });
             if (res && !res.ok) setError(res.error);
           });
         }}

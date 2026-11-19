@@ -121,3 +121,34 @@ export function storyHeadlinePrompt(input: {
   }
   return parts.join("\n");
 }
+
+/**
+ * Picks the day's most important stories from a pool of candidates and writes
+ * the whole edition: headline, briefing, and a headline + summary per highlight.
+ * Highlights refer to candidates by their index attribute.
+ */
+export function draftLetterPrompt(input: {
+  stories: SourceStory[];
+  date: string;
+  tone?: string;
+  minHighlights: number;
+  maxHighlights: number;
+}): string {
+  const { minHighlights: min, maxHighlights: max } = input;
+  const count = min === max ? `exactly ${min}` : `${min} to ${max}`;
+  return [
+    storiesXml(input.stories),
+    "",
+    toneLine(input.tone),
+    `Edition date: ${input.date}`,
+    "",
+    `The stories above are everything published on the edition date by our sources. Several may report the same event. Draft the full edition:`,
+    "",
+    `1. Choose the ${count} most important distinct stories of the day (by public significance, not by how many outlets covered them, and never two about the same event). For each, give the index of the single best source story to link to.`,
+    `2. For each chosen story, write a headline (under 90 characters) that makes clear what actually happened, and a summary of one or two sentences (25 to 50 words) using only what that story and any others about the same event say.`,
+    `3. Write the edition headline (under 80 characters) capturing the day as a whole or its dominant thread.`,
+    `4. Write the briefing: 60 to 100 words, in one or two short paragraphs, a confident editorial overview of the chosen stories rather than a list.`,
+    "",
+    "Order the highlights from most to least important.",
+  ].join("\n");
+}

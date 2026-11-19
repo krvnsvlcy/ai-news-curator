@@ -55,6 +55,7 @@ function failure(err: unknown): { ok: false; error: string; conflict?: boolean }
 
 function revalidateLetters(id?: string) {
   revalidatePath("/letters");
+  revalidatePath("/"); // the Overview lists letters too
   if (id) revalidatePath(`/letters/${id}`);
 }
 
@@ -74,15 +75,17 @@ export async function duplicateLetterAction(id: string): Promise<void> {
   redirect(`/letters/${copy._id.toHexString()}`);
 }
 
+/** From a list, `stay` keeps the reader on that page; from the editor it goes to Letters. */
 export async function deleteLetterAction(
   id: string,
+  opts: { stay?: boolean } = {},
 ): Promise<{ ok: false; error: string } | undefined> {
   await requireSession();
   if (!(await deleteDraftLetter(id))) {
     return { ok: false, error: "Only draft letters can be deleted." };
   }
   revalidateLetters();
-  redirect("/letters");
+  if (!opts.stay) redirect("/letters");
 }
 
 export async function saveLetterAction(

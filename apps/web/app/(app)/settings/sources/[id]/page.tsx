@@ -22,14 +22,18 @@ export default async function EditSourcePage({ params }: { params: Promise<{ id:
         title={source.name}
         description={
           <>
-            <Link href="/sources" className="hover:text-ink hover:underline">
+            <Link href="/settings" className="hover:text-ink hover:underline">
+              Settings
+            </Link>{" "}
+            /{" "}
+            <Link href="/settings/sources" className="hover:text-ink hover:underline">
               Sources
             </Link>{" "}
             / Edit
           </>
         }
       />
-      <PageBody narrow>
+      <PageBody>
         <SourceForm
           action={saveSource.bind(null, id)}
           initial={valuesFromSource(source)}

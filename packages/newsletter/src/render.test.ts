@@ -48,11 +48,10 @@ describe("renderLetterHtml", () => {
     expect(html).not.toContain("<b>paragraph");
   });
 
-  it("uses merge tags for subscription links by default", () => {
-    expect(html).toContain('href="{{unsubscribe_url}}"');
-    expect(html).toContain('href="{{manage_url}}"');
-    const custom = renderLetterHtml(letter, { ...options, unsubscribeUrl: "https://x.test/u" });
-    expect(custom).toContain('href="https://x.test/u"');
+  it("has no subscription links, only a note on why the reader gets it", () => {
+    expect(html).not.toContain("{{");
+    expect(html).not.toContain("Unsubscribe");
+    expect(html).toContain("added you to the list");
   });
 
   it("omits empty sections", () => {
@@ -66,10 +65,10 @@ describe("helpers", () => {
   it("formats dates without time zone drift", () => {
     expect(formatLetterDate("2026-01-01")).toBe("Thursday 1 January 2026");
   });
-  it("only allows http(s) and merge tags", () => {
+  it("only allows http(s) links", () => {
     expect(safeHref("https://a.test/?q=1&b=2")).toBe("https://a.test/?q=1&amp;b=2");
     expect(safeHref("mailto:x@y")).toBe("#");
-    expect(safeHref("{{unsubscribe_url}}")).toBe("{{unsubscribe_url}}");
+    expect(safeHref("{{unsubscribe_url}}")).toBe("#");
   });
   it("renders a plain-text part", () => {
     const text = renderLetterText(letter, options);

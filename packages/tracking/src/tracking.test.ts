@@ -1,6 +1,6 @@
 import { renderLetterHtml } from "@curator/newsletter";
 import { describe, expect, it } from "vitest";
-import { rewriteStoryLinks } from "./links.js";
+import { addOpenPixel, rewriteStoryLinks } from "./links.js";
 import { Tracker } from "./tokens.js";
 
 const tracker = new Tracker("s".repeat(32));
@@ -36,14 +36,14 @@ describe("Tracker", () => {
 
   it("rejects tampered, foreign, or wrong-kind tokens", () => {
     const token = tracker.createToken({
-      kind: "unsubscribe",
+      kind: "open",
       letterId,
       storyId: "",
       recipient: "r",
       test: false,
     });
     expect(tracker.verifyToken(token, "click")).toBeNull();
-    expect(tracker.verifyToken(token, "unsubscribe")?.kind).toBe("unsubscribe");
+    expect(tracker.verifyToken(token, "open")?.kind).toBe("open");
 
     const [body, sig] = token.split(".");
     const forged = Buffer.from(
@@ -82,6 +82,19 @@ describe("rewriteStoryLinks", () => {
     expect(out).not.toContain("https://a.test/x");
     expect(out).not.toContain("https://b.test/");
     expect(out.match(/https:\/\/app\.test\/r\/s1\?a=1&amp;b=2/g)).toHaveLength(2); // headline + attribution
-    expect(out).toContain('href="{{unsubscribe_url}}"'); // footer untouched
+    const footer = html.slice(html.lastIndexOf('<table role="presentation" class="container"'));
+    expect(out.endsWith(footer)).toBe(true); // footer untouched
+  });
+});
+
+describe("addOpenPixel", () => {
+  it("inserts an escaped 1×1 image before </body>", () => {
+    const out = addOpenPixel("<html><body><p>Hi</p></body></html>", "https://app.test/o/a?b=1&c=2");
+    expect(out).toBe(
+      '<html><body><p>Hi</p><img src="https://app.test/o/a?b=1&amp;c=2" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;opacity:0;" /></body></html>',
+    );
+  });
+  it("appends when there is no </body>", () => {
+    expect(addOpenPixel("<p>x</p>", "https://a.test/o")).toMatch(/^<p>x<\/p><img /);
   });
 });

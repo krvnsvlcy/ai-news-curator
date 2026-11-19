@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
-import { LocalStorageNotice } from "@/components/local-storage-notice";
+import { Modal } from "@/components/modal";
 import { formatDateTime, timeAgo } from "@/lib/format";
 import type { EditorSend, LetterStatus } from "@/lib/letters";
-import { isValidEmail, readTestEmail, rememberTestEmail, useSubscribers } from "@/lib/subscribers";
-import { type SendResult, sendLetterAction } from "../send-actions";
+import { isValidEmail, readTestEmail, rememberTestEmail } from "@/lib/subscribers";
+import { type SendResult, sendAudienceAction, sendLetterAction } from "../send-actions";
 import { inputClass, labelClass } from "./fields";
-import { Modal } from "./modal";
 
 export function SendDialog({
   open,
@@ -31,22 +30,25 @@ export function SendDialog({
   ensureSaved: () => Promise<number | null>;
   onSent: (send: EditorSend, published: boolean) => void;
 }) {
-  const { subscribers, ready } = useSubscribers();
-  const active = subscribers.filter((s) => s.status === "active");
+  // The subscribers on your list (counted on the server when the dialog opens).
+  const [audience, setAudience] = useState<{ count: number; limit: number }>();
+  const ready = audience !== undefined;
+  const listCount = audience?.count ?? 0;
   const [testTo, setTestTo] = useState("");
   const [result, setResult] = useState<{ kind: "test" | "subscribers"; res: SendResult }>();
   const [pending, start] = useTransition();
   const [pendingKind, setPendingKind] = useState<"test" | "subscribers">();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: prefill only when the dialog opens
   useEffect(() => {
     if (open) {
       setResult(undefined);
-      setTestTo((v) => v || readTestEmail() || active[0]?.email || "");
+      setTestTo((v) => v || readTestEmail());
+      setAudience(undefined);
+      sendAudienceAction().then(setAudience, () => setAudience({ count: 0, limit: 0 }));
     }
   }, [open]);
 
-  function send(kind: "test" | "subscribers", recipients: string[]) {
+  function send(kind: "test" | "subscribers", recipients: string[] = []) {
     setPendingKind(kind);
     setResult(undefined);
     start(async () => {
@@ -58,7 +60,11 @@ export function SendDialog({
         });
         return;
       }
-      const res = await sendLetterAction({ id: letterId, revision: rev, mode: kind, recipients });
+      const res = await sendLetterAction(
+        kind === "test"
+          ? { id: letterId, revision: rev, mode: "test", recipients }
+          : { id: letterId, revision: rev, mode: "subscribers" },
+      );
       setResult({ kind, res });
       if (res.ok) onSent(res.send, res.published);
     });
@@ -78,14 +84,12 @@ export function SendDialog({
     send("test", [to]);
   }
 
-  const canSendToSubscribers = status !== "draft" && active.length > 0;
+  const canSendToSubscribers = status !== "draft" && listCount > 0;
   const subscriberSends = sends.filter((s) => s.kind === "subscribers");
 
   return (
     <Modal open={open} onClose={onClose} title="Send letter">
       <div className="space-y-5 p-5">
-        <LocalStorageNotice />
-
         <form onSubmit={onTest} className="space-y-2" noValidate>
           <label htmlFor="test-to" className={labelClass}>
             Send a test
@@ -118,15 +122,15 @@ export function SendDialog({
           <p className="text-[13px] text-muted">
             {!ready
               ? "Loading subscribers…"
-              : active.length === 0
-                ? "No active subscribers in this browser yet."
-                : `${active.length} active ${active.length === 1 ? "subscriber" : "subscribers"} in this browser.`}{" "}
+              : listCount === 0
+                ? "You haven't added any subscribers yet."
+                : `Goes to the ${listCount} ${listCount === 1 ? "subscriber" : "subscribers"} on your list.`}{" "}
             <Link href="/subscribers" className="underline hover:text-ink">
               Manage subscribers
             </Link>
           </p>
           {status === "draft" && (
-            <p className="text-[12.5px] text-amber-700 dark:text-amber-400">
+            <p className="text-[12.5px] text-amber-700">
               Mark the letter ready before sending it to subscribers.
             </p>
           )}
@@ -148,20 +152,17 @@ export function SendDialog({
             onClick={() => {
               if (
                 confirm(
-                  `Send this letter to ${active.length} ${active.length === 1 ? "subscriber" : "subscribers"}?`,
+                  `Send this letter to ${listCount} ${listCount === 1 ? "subscriber" : "subscribers"}?`,
                 )
               ) {
-                send(
-                  "subscribers",
-                  active.map((s) => s.email),
-                );
+                send("subscribers");
               }
             }}
             className={buttonClass("primary")}
           >
             {pending && pendingKind === "subscribers"
               ? "Sending…"
-              : `Send to ${active.length} ${active.length === 1 ? "subscriber" : "subscribers"}`}
+              : `Send to ${listCount} ${listCount === 1 ? "subscriber" : "subscribers"}`}
           </button>
           {result?.kind === "subscribers" && <ResultLine res={result.res} />}
         </div>
@@ -196,17 +197,17 @@ export function SendDialog({
 function ResultLine({ res }: { res: SendResult }) {
   if (!res.ok) {
     return (
-      <p role="alert" className="text-[12.5px] text-red-600 dark:text-red-400">
+      <p role="alert" className="text-[12.5px] text-red-600">
         {res.error}
       </p>
     );
   }
   return (
-    <div role="status" className="text-[12.5px] text-green-700 dark:text-green-400">
+    <div role="status" className="text-[12.5px] text-sea">
       Delivered to {res.delivered} {res.delivered === 1 ? "address" : "addresses"}
       {res.published && ". The letter is now published"}.
       {res.failed.length > 0 && (
-        <ul className="mt-1 text-red-600 dark:text-red-400">
+        <ul className="mt-1 text-red-600">
           {res.failed.map((f) => (
             <li key={f.to}>
               {f.to}: {f.error}

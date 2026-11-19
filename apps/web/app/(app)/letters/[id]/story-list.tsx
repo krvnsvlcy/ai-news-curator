@@ -151,7 +151,7 @@ function StoryCard({
               {...attributes}
               {...listeners}
               aria-label={`Reorder story ${index + 1}. Press space to pick up, arrows to move.`}
-              className="cursor-grab touch-none rounded p-0.5 text-muted hover:bg-hover hover:text-ink active:cursor-grabbing"
+              className="cursor-grab touch-none rounded-sm p-0.5 text-muted hover:bg-hover hover:text-ink active:cursor-grabbing"
             >
               <GripIcon className="size-4" />
             </button>
@@ -183,7 +183,7 @@ function StoryCard({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
             <span className="font-medium text-ink">{story.original.sourceName}</span>
             {!story.articleId && (
-              <span className="rounded border border-rule px-1 text-[11px]">External</span>
+              <span className="rounded-sm border border-rule px-1 text-[11px]">External</span>
             )}
             <a
               href={story.original.url}
@@ -203,7 +203,7 @@ function StoryCard({
                 type="button"
                 onClick={() => setAiOpen((o) => !o)}
                 aria-expanded={aiOpen}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-violet-700 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/40"
+                className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-violet-700 hover:bg-violet-50"
               >
                 <SparkleIcon className="size-3.5" />
                 {story.headline.trim() ? "Rewrite headline" : "Suggest headline"}
@@ -220,7 +220,7 @@ function StoryCard({
               <button
                 type="button"
                 onClick={onRemove}
-                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-muted hover:bg-red-50 hover:text-red-700"
                 aria-label={`Remove story ${index + 1} from letter`}
               >
                 <TrashIcon className="size-3.5" /> Remove

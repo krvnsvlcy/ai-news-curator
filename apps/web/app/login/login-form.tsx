@@ -1,16 +1,16 @@
 "use client";
 
 import { useActionState } from "react";
-import { buttonClass } from "@/components/button-styles";
+import { editorialButton, editorialInput } from "@/components/editorial";
 import { type LoginState, login } from "./actions";
 
-export function LoginForm({ from }: { from?: string }) {
+export function LoginForm({ from, hint }: { from?: string; hint?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(login, {});
 
   return (
-    <form action={action} className="mt-5">
+    <form action={action} className="mt-10 text-left">
       <input type="hidden" name="from" value={from ?? "/"} />
-      <label htmlFor="password" className="text-[13px] font-medium">
+      <label htmlFor="password" className="block text-center text-[13px] text-muted">
         Password
       </label>
       <input
@@ -19,24 +19,34 @@ export function LoginForm({ from }: { from?: string }) {
         type="password"
         autoComplete="current-password"
         required
+        placeholder={hint}
+        // biome-ignore lint/a11y/noAutofocus: the password is the page's only field
+        autoFocus
         aria-invalid={Boolean(state.error)}
-        aria-describedby={state.error ? "password-error" : undefined}
-        className="mt-1.5 block w-full rounded-md border border-rule bg-paper px-3 py-1.5 text-[14px] outline-none transition-colors focus:border-ink aria-[invalid=true]:border-red-600"
+        aria-describedby={
+          [state.error && "password-error", hint && "password-hint"].filter(Boolean).join(" ") ||
+          undefined
+        }
+        className={`${editorialInput} mt-1 text-center`}
       />
+      {/* Placeholders aren't reliably announced; keep the hint available to screen readers. */}
+      {hint && (
+        <p id="password-hint" className="sr-only">
+          Hint: {hint}
+        </p>
+      )}
       <p
         id="password-error"
         role="alert"
-        className="mt-1.5 min-h-5 text-[13px] text-red-600 dark:text-red-400"
+        className="mt-2 min-h-5 text-center text-[13px] text-red-600"
       >
         {state.error}
       </p>
-      <button
-        type="submit"
-        disabled={pending}
-        className={`${buttonClass("primary")} mt-2 h-9 w-full`}
-      >
-        {pending ? "Signing in…" : "Sign in"}
-      </button>
+      <div className="mt-6 flex justify-center">
+        <button type="submit" disabled={pending} className={editorialButton}>
+          {pending ? "Signing in…" : "Sign in"}
+        </button>
+      </div>
     </form>
   );
 }

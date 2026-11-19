@@ -2,23 +2,26 @@
 
 import {
   changeLetterStatus,
+  countOwnSubscribers,
   getLetter,
   type LetterSendRecord,
+  listOwnEmails,
+  recordDelivered,
   recordLetterSend,
 } from "@curator/db";
 import {
-  personalizeHtml,
-  personalizeText,
+  removeLegacySubscriptionLinks,
   renderLetterHtml,
   renderLetterText,
 } from "@curator/newsletter";
-import { rewriteStoryLinks } from "@curator/tracking";
+import { addOpenPixel, rewriteStoryLinks } from "@curator/tracking";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import { type EditorSend, toNewsletterLetter } from "@/lib/letters";
 import { appOrigin, getMailer } from "@/lib/mail";
 import { newsletterOptions } from "@/lib/newsletter-config";
+import { currentOwnerId } from "@/lib/owner-server";
 import { getTracker } from "@/lib/tracking";
 
 export type SendResult =
@@ -33,20 +36,35 @@ export type SendResult =
 
 const MAX_RECIPIENTS = 200;
 
-const inputSchema = z.object({
-  id: z.string().regex(/^[0-9a-f]{24}$/),
-  revision: z.number().int().min(0),
-  mode: z.enum(["test", "subscribers"]),
-  recipients: z
-    .array(z.email().max(254))
-    .min(1, "Add at least one recipient.")
-    .max(MAX_RECIPIENTS, `At most ${MAX_RECIPIENTS} recipients per send in this demo.`),
-});
+const inputSchema = z.discriminatedUnion("mode", [
+  z.object({
+    id: z.string().regex(/^[0-9a-f]{24}$/),
+    revision: z.number().int().min(0),
+    mode: z.literal("test"),
+    recipients: z
+      .array(z.email().max(254))
+      .min(1, "Add at least one recipient.")
+      .max(5, "Test sends go to at most 5 addresses."),
+  }),
+  z.object({
+    id: z.string().regex(/^[0-9a-f]{24}$/),
+    revision: z.number().int().min(0),
+    mode: z.literal("subscribers"),
+  }),
+]);
+
+/** What "Send to subscribers" would reach from this browser. */
+export async function sendAudienceAction(): Promise<{ count: number; limit: number }> {
+  await requireSession();
+  const ownerId = await currentOwnerId();
+  return { count: ownerId ? await countOwnSubscribers(ownerId) : 0, limit: MAX_RECIPIENTS };
+}
 
 /**
- * Sends a letter. Recipients come from the sender's own browser (demo
- * subscribers live in localStorage); addresses are used for this send only and
- * never stored. Sending to subscribers publishes a "ready" letter.
+ * Sends a letter. Test sends go to the given addresses (not stored). Subscriber
+ * sends go to every address on this browser's list, looked up on the server, so
+ * nobody can email addresses only someone else added. Sending to
+ * subscribers publishes a "ready" letter.
  */
 export async function sendLetterAction(input: z.input<typeof inputSchema>): Promise<SendResult> {
   await requireSession();
@@ -54,9 +72,21 @@ export async function sendLetterAction(input: z.input<typeof inputSchema>): Prom
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid request." };
   const { id, revision, mode } = parsed.data;
-  const recipients = [...new Set(parsed.data.recipients.map((r) => r.trim().toLowerCase()))];
-  if (mode === "test" && recipients.length > 5) {
-    return { ok: false, error: "Test sends go to at most 5 addresses." };
+  let recipients: string[];
+  if (parsed.data.mode === "test") {
+    recipients = [...new Set(parsed.data.recipients.map((r) => r.trim().toLowerCase()))];
+  } else {
+    const ownerId = await currentOwnerId();
+    recipients = ownerId ? await listOwnEmails(ownerId, MAX_RECIPIENTS + 1) : [];
+    if (recipients.length === 0) {
+      return { ok: false, error: "You have no subscribers to send to." };
+    }
+    if (recipients.length > MAX_RECIPIENTS) {
+      return {
+        ok: false,
+        error: `At most ${MAX_RECIPIENTS} recipients per send in this demo.`,
+      };
+    }
   }
 
   const mailer = getMailer();
@@ -80,14 +110,17 @@ export async function sendLetterAction(input: z.input<typeof inputSchema>): Prom
   }
 
   const options = newsletterOptions();
-  // A published edition is always re-sent exactly as archived.
-  const baseHtml = letter.publishedHtml ?? renderLetterHtml(toNewsletterLetter(letter), options);
+  // A published edition is always re-sent as archived (minus the subscription
+  // links older template versions included).
+  const baseHtml = letter.publishedHtml
+    ? removeLegacySubscriptionLinks(letter.publishedHtml)
+    : renderLetterHtml(toNewsletterLetter(letter), options);
   const baseText = renderLetterText(toNewsletterLetter(letter), options);
   const origin = await appOrigin();
   const subject = `${mode === "test" ? "[Test] " : ""}${letter.headline || "Untitled edition"}`;
 
-  // Per-recipient links: story clicks go through /r/<token> and the unsubscribe
-  // link carries a token, both identifying the reader only by an anonymous id.
+  // Per-recipient tracking: story clicks go through /r/<token> and an open pixel
+  // loads /o/<token>, both identifying the reader only by an anonymous id.
   const tracker = getTracker();
   const test = mode === "test";
   const stories = letter.stories.map((s) => ({ id: s.id, url: s.original.url }));
@@ -95,25 +128,16 @@ export async function sendLetterAction(input: z.input<typeof inputSchema>): Prom
     const recipient = tracker.recipientId(to);
     const clickUrl = (storyId: string) =>
       `${origin}/r/${tracker.createToken({ kind: "click", letterId: id, storyId, recipient, test })}`;
-    const unsubscribeToken = tracker.createToken({
-      kind: "unsubscribe",
-      letterId: id,
-      storyId: "",
-      recipient,
-      test,
-    });
-    const links = {
-      manageUrl: `${origin}/subscribe`,
-      unsubscribeUrl: `${origin}/unsubscribe?email=${encodeURIComponent(to)}&t=${unsubscribeToken}`,
-    };
     const trackText = (text: string) =>
       stories.reduce((t, s) => t.replaceAll(s.url, clickUrl(s.id)), text);
     return {
       to,
       subject,
-      html: personalizeHtml(rewriteStoryLinks(baseHtml, stories, clickUrl), links),
-      text: personalizeText(trackText(baseText), links),
-      unsubscribeUrl: links.unsubscribeUrl,
+      html: addOpenPixel(
+        rewriteStoryLinks(baseHtml, stories, clickUrl),
+        `${origin}/o/${tracker.createToken({ kind: "open", letterId: id, storyId: "", recipient, test })}.gif`,
+      ),
+      text: trackText(baseText),
     };
   });
 
@@ -133,7 +157,10 @@ export async function sendLetterAction(input: z.input<typeof inputSchema>): Prom
     failed: result.failed.length,
   };
   await recordLetterSend(id, record);
+  // Daily dashboard counter (subscriber sends only; tests never count).
+  if (mode === "subscribers") await recordDelivered(result.delivered.length);
   revalidatePath("/letters");
+  revalidatePath("/");
 
   if (result.delivered.length === 0) {
     const reason = result.failed[0]?.error ?? "unknown error";

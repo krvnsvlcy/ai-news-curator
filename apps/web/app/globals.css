@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Editorial palette: near-black ink on warm white, one green accent. */
+@theme {
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #ffffff;
+  --color-ink: #242424;
+  --color-muted: #6b6b6b;
+  --color-rule: #f2f2f2;
+  --color-chip: #f2f2f2;
+  --color-accent: #1a8917;
+}
+
+@layer base {
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-paper: #121212;
+      --color-ink: #e6e6e6;
+      --color-muted: #9a9a9a;
+      --color-rule: #262626;
+      --color-chip: #232323;
+      --color-accent: #4caf50;
+    }
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 25%, transparent);
+  }
+}

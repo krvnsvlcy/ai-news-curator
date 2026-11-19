@@ -1,5 +1,21 @@
 {
-  "files": { "includes": ["**", "!**/dist", "!**/.next", "!**/next-env.d.ts"] },
-  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
-  "linter": { "enabled": true, "rules": { "preset": "recommended" } }
+  "files": {
+    "includes": ["**", "!**/dist", "!**/.next", "!**/next-env.d.ts"]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
 }

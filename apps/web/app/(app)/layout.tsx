@@ -1,6 +1,7 @@
 import { countSubscribers } from "@curator/db";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import { getAttribution } from "@/lib/attribution";
 import { requireSession } from "@/lib/auth/session";
 import { logout } from "../login/actions";
 
@@ -11,7 +12,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Total across everyone (a count only); shown in the nav on every page.
   const total = await countSubscribers();
   return (
-    <AppShell signOut={logout} subscriberTotal={total}>
+    <AppShell signOut={logout} subscriberTotal={total} attribution={getAttribution()}>
       {children}
     </AppShell>
   );

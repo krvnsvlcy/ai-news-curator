@@ -10,6 +10,8 @@ import {
   useState,
   useTransition,
 } from "react";
+import type { Attribution } from "@/lib/attribution";
+import { AttributionCredit } from "./attribution-credit";
 import { ConfirmDialog } from "./confirm-dialog";
 import { EditorialWordmark } from "./editorial";
 import {
@@ -38,11 +40,14 @@ export function AppShell({
   children,
   signOut,
   subscriberTotal,
+  attribution,
 }: {
   children: ReactNode;
   signOut: () => Promise<void>;
   /** Subscribers across everyone. */
   subscriberTotal: number;
+  /** "Built by …" credit at the bottom of the sidebar. */
+  attribution?: Attribution | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -116,6 +121,7 @@ export function AppShell({
           <SignOutIcon className="size-[18px] shrink-0" />
           Sign out
         </button>
+        <AttributionCredit attribution={attribution} className="px-2.5 pt-3 pb-1" />
       </div>
     </div>
   );

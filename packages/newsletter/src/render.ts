@@ -28,21 +28,24 @@ export interface NewsletterOptions {
 /**
  * Bump when the template changes in a way that alters published output.
  * v2: no subscription links (subscribers are managed by the editor only).
+ * v3: app palette (navy, blue, soft gray canvas), rounded borderless card and briefing.
  */
-export const TEMPLATE_VERSION = 2;
+export const TEMPLATE_VERSION = 3;
 
+// Mirrors the app theme in apps/web/app/globals.css.
 const C = {
-  page: "#f3f2ee",
+  page: "#f2f1f6",
   paper: "#ffffff",
-  ink: "#1a1a1a",
-  body: "#333333",
-  muted: "#77736b",
-  rule: "#e6e3dc",
-  briefingBg: "#f8f7f3",
-  accent: "#b3261e",
+  ink: "#000000",
+  body: "#2a2933",
+  muted: "#5c5b66",
+  rule: "#dddce6",
+  briefingBg: "#f2f1f6",
+  navy: "#1e3b7a",
+  accent: "#3366cc",
 };
-const SERIF = "Georgia, 'Times New Roman', Times, serif";
-const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+const SERIF = "'Source Serif 4', Georgia, 'Times New Roman', Times, serif";
+const SANS = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
 export function escapeHtml(s: string): string {
   return s
@@ -109,7 +112,7 @@ function storyBlock(story: NewsletterStory, index: number, last: boolean): strin
               <p style="margin:14px 0 0 0;font-family:${SANS};font-size:13px;line-height:1.5;color:${C.muted};">
                 <span style="font-weight:600;color:${C.body};">${escapeHtml(story.sourceName)}</span>
                 &nbsp;·&nbsp;
-                <a href="${href}" target="_blank" rel="noopener" style="color:${C.muted};text-decoration:underline;">${escapeHtml(story.originalTitle)}</a>
+                <a href="${href}" target="_blank" rel="noopener" style="color:${C.navy};text-decoration:underline;">${escapeHtml(story.originalTitle)}</a>
               </p>
             </td>
           </tr>`;
@@ -141,13 +144,14 @@ export function renderLetterHtml(letter: NewsletterLetter, options: NewsletterOp
 <title>${headline}</title>
 <style>
   body { margin:0; padding:0; -webkit-text-size-adjust:100%; }
-  a { color:${C.ink}; }
+  a { color:${C.navy}; }
   @media (max-width: 620px) {
     .container { width:100% !important; }
     .px { padding-left:22px !important; padding-right:22px !important; }
     .h1 { font-size:30px !important; }
     .story-h { font-size:21px !important; }
     .outer { padding:0 !important; }
+    .container { border-radius:0 !important; }
   }
 </style>
 </head>
@@ -156,16 +160,16 @@ export function renderLetterHtml(letter: NewsletterLetter, options: NewsletterOp
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.page};">
     <tr>
       <td class="outer" align="center" style="padding:32px 12px;">
-        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${C.paper};">
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${C.paper};border-radius:14px;">
           <tr>
             <td class="px" style="padding:36px 48px 0 48px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="font-family:${SANS};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${C.ink};">${name}</td>
+                  <td style="font-family:${SANS};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${C.navy};">${name}</td>
                   <td align="right" style="font-family:${SANS};font-size:12px;color:${C.muted};">${date}</td>
                 </tr>
               </table>
-              <div style="height:14px;border-bottom:2px solid ${C.ink};line-height:14px;font-size:0;">&nbsp;</div>
+              <div style="height:14px;border-bottom:2px solid ${C.navy};line-height:14px;font-size:0;">&nbsp;</div>
             </td>
           </tr>
           <tr>
@@ -178,7 +182,7 @@ export function renderLetterHtml(letter: NewsletterLetter, options: NewsletterOp
             briefing
               ? `<tr>
             <td class="px" style="padding:24px 48px 8px 48px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.briefingBg};border-left:3px solid ${C.ink};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.briefingBg};border-radius:12px;">
                 <tr>
                   <td style="padding:20px 24px 8px 24px;">
                     <p style="margin:0 0 10px 0;font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${C.muted};">The briefing</p>

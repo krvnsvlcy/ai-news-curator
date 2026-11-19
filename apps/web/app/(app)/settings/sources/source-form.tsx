@@ -9,7 +9,7 @@ import type { SourceFormState, SourceFormValues } from "./form-values";
 const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
 
 const inputClass =
-  "mt-1.5 block w-full rounded-md border border-rule bg-paper px-3 py-1.5 text-[14px] text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-ink aria-[invalid=true]:border-red-600";
+  "mt-1.5 block w-full rounded-md border border-rule bg-paper px-3 py-1.5 text-[14px] text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-ink aria-[invalid=true]:border-danger";
 
 export function SourceForm({
   action,
@@ -33,7 +33,7 @@ export function SourceForm({
     >
       <div className="space-y-6 p-5 sm:p-6">
         {e.form && (
-          <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-danger">
             {e.form}
           </p>
         )}
@@ -205,7 +205,7 @@ function Field({
       </label>
       {children}
       {error ? (
-        <p role="alert" className="mt-1.5 text-[13px] text-red-600">
+        <p role="alert" className="mt-1.5 text-[13px] text-danger">
           {error}
         </p>
       ) : (

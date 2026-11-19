@@ -42,7 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
 function notice(status: number, message: string) {
   return new Response(
-    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Link unavailable</title><body style="font-family:Georgia,serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#1a1a1a"><h1 style="font-size:1.6rem">Link unavailable</h1><p>${message}</p></body>`,
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Link unavailable</title><body style="font-family:Georgia,serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#000000"><h1 style="font-size:1.6rem">Link unavailable</h1><p>${message}</p></body>`,
     {
       status,
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },

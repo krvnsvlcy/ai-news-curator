@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ComponentType, type ReactNode, type SVGProps, useEffect, useState } from "react";
+import {
+  type ComponentType,
+  type ReactNode,
+  type SVGProps,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
+import { ConfirmDialog } from "./confirm-dialog";
 import { EditorialWordmark } from "./editorial";
 import {
   CloseIcon,
@@ -38,6 +46,8 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [signingOut, startSignOut] = useTransition();
 
   // Close the mobile drawer whenever the route changes.
   // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the trigger
@@ -95,15 +105,17 @@ export function AppShell({
           <SettingsIcon className="size-[18px] shrink-0" />
           Settings
         </Link>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[14px] text-muted transition-colors hover:bg-hover hover:text-ink"
-          >
-            <SignOutIcon className="size-[18px] shrink-0" />
-            Sign out
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setSignOutOpen(true);
+          }}
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[14px] text-muted transition-colors hover:bg-hover hover:text-ink"
+        >
+          <SignOutIcon className="size-[18px] shrink-0" />
+          Sign out
+        </button>
       </div>
     </div>
   );
@@ -151,6 +163,17 @@ export function AppShell({
           {children}
         </div>
       </div>
+      <ConfirmDialog
+        open={signOutOpen}
+        onClose={() => setSignOutOpen(false)}
+        onConfirm={() => startSignOut(() => signOut())}
+        title="Sign out?"
+        confirmLabel="Sign out"
+        pendingLabel="Signing out…"
+        pending={signingOut}
+      >
+        <p>You'll need your password to sign back in.</p>
+      </ConfirmDialog>
     </div>
   );
 }

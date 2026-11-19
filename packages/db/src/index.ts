@@ -6,6 +6,7 @@ export * from "./defaults.js";
 export * from "./events.js";
 export * from "./letter-schema.js";
 export * from "./letters.js";
+export * from "./prompts.js";
 export * from "./schema.js";
 export * from "./sources.js";
 export * from "./stats.js";

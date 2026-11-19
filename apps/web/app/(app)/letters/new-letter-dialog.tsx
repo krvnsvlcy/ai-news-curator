@@ -431,7 +431,7 @@ function Working({ date, today, run }: { date: string; today: string; run: Run }
         {run.error && (
           <p
             role="alert"
-            className="mt-6 rounded-md border border-red-600/20 bg-red-50 px-3 py-2 text-[13px] text-red-800"
+            className="mt-6 rounded-md border border-danger/20 bg-red-50 px-3 py-2 text-[13px] text-danger"
           >
             {run.error}
           </p>
@@ -459,7 +459,7 @@ function SourceChipView({ chip }: { chip: SourceChip }) {
         !o
           ? "border-rule text-muted"
           : o.status === "ok"
-            ? "border-sea/30 bg-sea/5 text-ink"
+            ? "border-blue/30 bg-blue/5 text-ink"
             : "border-amber-500/30 bg-amber-50 text-amber-900"
       }`}
     >
@@ -469,7 +469,7 @@ function SourceChipView({ chip }: { chip: SourceChip }) {
           className="size-2.5 rounded-full border border-rule border-t-primary motion-safe:animate-spin"
         />
       ) : o.status === "ok" ? (
-        <CheckIcon className="size-3 text-sea" strokeWidth={3} />
+        <CheckIcon className="size-3 text-blue" strokeWidth={3} />
       ) : (
         <span aria-hidden className="text-[10px] font-bold">
           !
@@ -663,9 +663,9 @@ function Step({
         aria-hidden
         className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${
           state === "done"
-            ? "border-sea bg-sea text-paper"
+            ? "border-blue bg-blue text-paper"
             : state === "error"
-              ? "border-red-600 text-red-600"
+              ? "border-danger text-danger"
               : state === "active"
                 ? "border-rule border-t-primary motion-safe:animate-spin"
                 : "border-rule"

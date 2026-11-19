@@ -3,12 +3,13 @@ import Link from "next/link";
 import { buttonClass } from "@/components/button-styles";
 import { PlusIcon } from "@/components/icons";
 import { PageBody, PageHeader, Panel } from "@/components/page";
+import { SettingsTabs } from "@/components/settings-tabs";
 import { SubmitButton } from "@/components/submit-button";
 import { requireSession } from "@/lib/auth/session";
 import { formatDateTime, formatInterval, timeAgo } from "@/lib/format";
 import { fetchSourceNowAction, seedDefaultsAction, toggleSourceAction } from "./actions";
 
-export const metadata = { title: "Sources · AI News Curator" };
+export const metadata = { title: "Sources · Settings · AI News Curator" };
 
 const COLS = "md:grid md:grid-cols-[minmax(0,1fr)_170px_80px_110px_auto] md:items-center md:gap-4";
 
@@ -20,18 +21,13 @@ export default async function SourcesPage() {
   return (
     <>
       <PageHeader
-        title="Sources"
+        title="Settings"
         description={
-          <>
-            <Link href="/settings" className="hover:text-ink hover:underline">
-              Settings
-            </Link>{" "}
-            /{" "}
-            {sources.length === 0
-              ? "Where stories come from."
-              : `${sources.filter((s) => s.enabled).length} active of ${sources.length}${failing ? ` · ${failing} failing` : ""}`}
-          </>
+          sources.length === 0
+            ? "Where stories come from."
+            : `${sources.filter((s) => s.enabled).length} active of ${sources.length} sources${failing ? ` · ${failing} failing` : ""}`
         }
+        tabs={<SettingsTabs active="sources" />}
         actions={
           <Link href="/settings/sources/new" className={buttonClass("primary")}>
             <PlusIcon className="size-4" /> New source
@@ -141,7 +137,7 @@ function SourceRow({ source: s, articleCount }: { source: SourceDoc; articleCoun
       </div>
 
       {s.lastStatus === "error" && s.lastError && (
-        <p className="mt-2.5 rounded-md border border-red-600/20 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">
+        <p className="mt-2.5 rounded-md border border-danger/20 bg-red-50 px-3 py-2 text-[12.5px] text-danger">
           {s.lastError}
         </p>
       )}
@@ -164,8 +160,8 @@ function Status({ source: s }: { source: SourceDoc }) {
   );
   if (s.lastStatus === "error") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-red-700">
-        <Dot className="bg-red-600" />
+      <span className="inline-flex items-center gap-1.5 text-danger">
+        <Dot className="bg-danger" />
         <span>Failed {when}</span>
       </span>
     );

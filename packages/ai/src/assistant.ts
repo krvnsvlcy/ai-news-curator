@@ -13,6 +13,8 @@ import {
   briefingPrompt,
   draftLetterPrompt,
   letterHeadlinePrompt,
+  type PromptTexts,
+  resolvePrompts,
   type SourceStory,
   storyHeadlinePrompt,
   systemPrompt,
@@ -59,6 +61,12 @@ export interface AssistantOptions {
    * pass a mock model.
    */
   model?: LanguageModel;
+  /**
+   * Loads the editor's prompt overrides (keyed by PromptKey); read before every
+   * request so changes apply without a restart. Defaults are used for anything
+   * missing, or if loading fails.
+   */
+  loadPrompts?: () => Promise<Partial<Record<string, string>>>;
 }
 
 function cleanLine(s: string): string {
@@ -151,10 +159,23 @@ function toAiError(err: unknown): AiError {
   );
 }
 
-export function createAssistant({ publicationName, model = MODEL }: AssistantOptions) {
-  const instructions = systemPrompt(publicationName);
+export function createAssistant({ publicationName, model = MODEL, loadPrompts }: AssistantOptions) {
+  async function prompts(): Promise<PromptTexts> {
+    if (!loadPrompts) return resolvePrompts();
+    try {
+      return resolvePrompts(await loadPrompts());
+    } catch (err) {
+      console.error("[ai] couldn't load prompt overrides; using defaults:", err);
+      return resolvePrompts();
+    }
+  }
 
-  async function run<T extends z.ZodType>(prompt: string, schema: T): Promise<z.infer<T>> {
+  async function run<T extends z.ZodType>(
+    p: PromptTexts,
+    prompt: string,
+    schema: T,
+  ): Promise<z.infer<T>> {
+    const instructions = systemPrompt(publicationName, p);
     try {
       const result = await generateText({
         model,
@@ -181,11 +202,13 @@ export function createAssistant({ publicationName, model = MODEL }: AssistantOpt
 
   /** Like run(), but streams: `onPartial` sees the output as it's generated. */
   async function runStreaming<T extends z.ZodType>(
+    p: PromptTexts,
     prompt: string,
     schema: T,
     onPartial: (partial: DeepPartial<z.infer<T>>) => void,
     abortSignal?: AbortSignal,
   ): Promise<z.infer<T>> {
+    const instructions = systemPrompt(publicationName, p);
     let streamError: unknown;
     try {
       const result = streamText({
@@ -231,7 +254,8 @@ export function createAssistant({ publicationName, model = MODEL }: AssistantOpt
       currentHeadline?: string;
     }): Promise<string[]> {
       requireStories(input.stories);
-      const out = await run(letterHeadlinePrompt(input), headlinesSchema);
+      const p = await prompts();
+      const out = await run(p, letterHeadlinePrompt(input, p), headlinesSchema);
       const headlines = uniqueNonEmpty(out.headlines, 3);
       if (!headlines.length) throw new AiError("Claude didn't suggest any headlines. Try again.");
       return headlines;
@@ -245,7 +269,8 @@ export function createAssistant({ publicationName, model = MODEL }: AssistantOpt
       instruction?: string;
     }): Promise<string> {
       requireStories(input.stories);
-      const out = await run(briefingPrompt(input), briefingSchema);
+      const p = await prompts();
+      const out = await run(p, briefingPrompt(input, p), briefingSchema);
       const briefing = cleanParagraphs(out.briefing);
       if (!briefing) throw new AiError("Claude returned an empty briefing. Try again.");
       return briefing;
@@ -268,8 +293,10 @@ export function createAssistant({ publicationName, model = MODEL }: AssistantOpt
         );
       }
       const maxHighlights = Math.min(5, input.stories.length);
+      const p = await prompts();
       const out = await runStreaming(
-        draftLetterPrompt({ ...input, minHighlights: MIN_DRAFT_STORIES, maxHighlights }),
+        p,
+        draftLetterPrompt({ ...input, minHighlights: MIN_DRAFT_STORIES, maxHighlights }, p),
         draftSchema,
         onPartial,
         signal,
@@ -301,7 +328,8 @@ export function createAssistant({ publicationName, model = MODEL }: AssistantOpt
       instruction?: string;
       otherHeadlines?: string[];
     }): Promise<string[]> {
-      const out = await run(storyHeadlinePrompt(input), headlinesSchema);
+      const p = await prompts();
+      const out = await run(p, storyHeadlinePrompt(input, p), headlinesSchema);
       const headlines = uniqueNonEmpty(out.headlines, 3);
       if (!headlines.length) throw new AiError("Claude didn't suggest any headlines. Try again.");
       return headlines;

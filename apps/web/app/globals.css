@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
-/* Brand palette: Mirage ink, Wild Sand canvas, Blaze Orange accent,
-   Deep Sea Green for healthy states. Orange is 3.1:1 on white: use it for
-   fills, dots and bars, not small text. */
+/* Brand palette: black ink on white paper over a soft #F2F1F6 canvas.
+   Navy for primary actions, bright blue for accents and positive states,
+   red for errors and destructive actions. All three pass 4.5:1 on white,
+   so they are safe for small text as well as fills. */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
@@ -13,21 +14,27 @@
   --radius-lg: 0.875rem;
   --radius-xl: 1rem;
 
+  /* Core six. */
   --color-paper: #ffffff;
+  --color-canvas: #f2f1f6;
+  --color-ink: #000000;
+  --color-navy: #1e3b7a;
+  --color-blue: #3366cc;
+  --color-red: #d90912;
+
+  /* Derived steps between them. */
   /* The main content card: a step lighter than the canvas it sits on. */
-  --color-surface: #f4f8f9;
-  --color-canvas: #e4eef0;
-  --color-ink: #16232a;
-  --color-muted: #56656b;
-  --color-rule: #cfdde1;
-  --color-chip: #dce8eb;
-  --color-hover: #d5e3e7;
-  --color-orange: #ff5b04;
-  --color-sea: #075056;
-  --color-primary: var(--color-sea);
-  --color-primary-hover: #053e43;
-  --color-accent: var(--color-orange);
-  --color-series-1: var(--color-orange);
+  --color-surface: #f9f9fb;
+  --color-muted: #5c5b66;
+  --color-rule: #dddce6;
+  --color-chip: #e9e8f0;
+  --color-hover: #e3e2eb;
+  --color-primary: var(--color-navy);
+  --color-primary-hover: #172e60;
+  --color-accent: var(--color-blue);
+  --color-series-1: var(--color-blue);
+  --color-danger: var(--color-red);
+  --color-danger-hover: #b0070f;
 }
 
 @layer base {

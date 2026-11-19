@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PlusIcon } from "@/components/icons";
 import { LetterStatusBadge } from "@/components/letter-status";
 import { PageHeader } from "@/components/page";
@@ -71,6 +72,8 @@ export function LetterEditor({
   const [externalOpen, setExternalOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [tab, setTab] = useState<"edition" | "stories">("edition");
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishError, setPublishError] = useState<string>();
   const [view, setViewState] = useState(initialView);
   const showAnalytics = analytics !== undefined && view === "analytics";
   function setView(v: "content" | "analytics") {
@@ -149,22 +152,21 @@ export function LetterEditor({
   }
 
   function publish() {
-    if (
-      !confirm(
-        "Publish this letter? It goes to everyone on your subscriber list and is locked for editing.",
-      )
-    ) {
-      return;
-    }
+    setPublishError(undefined);
     startBusy(async () => {
       let revision: number | null = letter.revision;
       if (dirty) revision = await save();
-      if (revision === null) return;
-      const res = await publishLetterAction({ id: letter.id, revision });
-      if (!res.ok) {
-        setBanner({ kind: "error", text: res.error, conflict: res.conflict });
+      if (revision === null) {
+        setPublishError("Couldn't save your latest changes, so nothing was published.");
         return;
       }
+      const res = await publishLetterAction({ id: letter.id, revision });
+      if (!res.ok) {
+        setPublishError(res.error);
+        if (res.conflict) setBanner({ kind: "error", text: res.error, conflict: true });
+        return;
+      }
+      setPublishOpen(false);
       const failed = res.failed.length;
       setLetter((l) => ({ ...l, ...res.letter, ...contentOf(l) }));
       setBanner({
@@ -248,7 +250,7 @@ export function LetterEditor({
             <span>{formatLetterDate(letter.date)}</span>
             <span>·</span>
             {saveBlocked && dirty ? (
-              <span className="text-red-700">Not saved</span>
+              <span className="text-danger">Not saved</span>
             ) : saving || dirty ? (
               <span>Saving…</span>
             ) : locked && letter.publishedAt ? (
@@ -265,6 +267,7 @@ export function LetterEditor({
                 id={letter.id}
                 label={letter.headline || "Untitled letter"}
                 compact
+                stay={false}
               />
             )}
             {analytics !== undefined && (
@@ -316,7 +319,10 @@ export function LetterEditor({
                     </button>
                     <button
                       type="button"
-                      onClick={publish}
+                      onClick={() => {
+                        setPublishError(undefined);
+                        setPublishOpen(true);
+                      }}
                       disabled={busy || saving || problems.length > 0}
                       className={buttonClass("primary")}
                     >
@@ -336,10 +342,10 @@ export function LetterEditor({
             role={banner.kind === "error" ? "alert" : "status"}
             className={`mx-4 mb-3 rounded-md border px-3 py-2 text-[13px] sm:mx-8 ${
               banner.kind === "error"
-                ? "border-red-600/20 bg-red-50 text-red-800"
+                ? "border-danger/20 bg-red-50 text-danger"
                 : banner.kind === "notice"
                   ? "border-amber-500/20 bg-amber-50 text-amber-900"
-                  : "border-sea/25 bg-sea/10 text-sea"
+                  : "border-blue/25 bg-blue/10 text-blue"
             }`}
           >
             {banner.text}
@@ -442,7 +448,7 @@ export function LetterEditor({
               className="-mx-1 min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pt-4 pb-1"
             >
               {locked && (
-                <p className="rounded-md border border-sea/25 bg-sea/10 px-3 py-2 text-[13px] text-sea">
+                <p className="rounded-md border border-blue/25 bg-blue/10 px-3 py-2 text-[13px] text-blue">
                   This edition is published and locked so it stays exactly as sent. Duplicate it to
                   start a new draft.
                 </p>
@@ -525,6 +531,25 @@ export function LetterEditor({
         selectedArticleIds={articleIds}
         onAdd={addArticle}
       />
+      <ConfirmDialog
+        open={publishOpen}
+        onClose={() => setPublishOpen(false)}
+        onConfirm={publish}
+        title="Publish this letter?"
+        confirmLabel="Publish"
+        pendingLabel="Publishing…"
+        pending={busy}
+        error={publishError}
+      >
+        <p>
+          <span className="font-medium">{letter.headline.trim() || "Untitled letter"}</span> goes
+          out to everyone on your subscriber list.
+        </p>
+        <p className="text-muted">
+          Once published, the letter is locked so it stays exactly as sent. You can still duplicate
+          it as a new draft.
+        </p>
+      </ConfirmDialog>
       <ExternalStoryDialog
         open={externalOpen}
         onClose={() => setExternalOpen(false)}
@@ -717,7 +742,7 @@ function BriefingSection({
       title="Daily briefing"
       aside={
         <span
-          className={`text-[12px] tabular-nums ${words === 0 ? "text-muted" : inRange ? "text-sea" : "text-amber-700"}`}
+          className={`text-[12px] tabular-nums ${words === 0 ? "text-muted" : inRange ? "text-blue" : "text-amber-700"}`}
         >
           {words} / {BRIEFING_WORDS.min}–{BRIEFING_WORDS.max} words
         </span>

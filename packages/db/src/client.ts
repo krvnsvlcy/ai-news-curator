@@ -2,6 +2,7 @@ import { type Collection, type Db, MongoClient } from "mongodb";
 import { getMongoConfig } from "./config.js";
 import type { EmailEventDoc } from "./events.js";
 import type { LetterDoc } from "./letter-schema.js";
+import type { PromptDoc } from "./prompts.js";
 import type { ArticleDoc, SourceDoc } from "./schema.js";
 import {
   type CounterDoc,
@@ -53,6 +54,7 @@ export async function collections(): Promise<{
   daily: Collection<DailyStatsDoc>;
   counters: Collection<CounterDoc>;
   readers: Collection<LetterReaderDoc>;
+  prompts: Collection<PromptDoc>;
 }> {
   const db = await getDb();
   return {
@@ -64,6 +66,7 @@ export async function collections(): Promise<{
     daily: db.collection<DailyStatsDoc>("daily_stats"),
     counters: db.collection<CounterDoc>("counters"),
     readers: db.collection<LetterReaderDoc>("letter_readers"),
+    prompts: db.collection<PromptDoc>("prompts"),
   };
 }
 

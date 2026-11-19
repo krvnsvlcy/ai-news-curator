@@ -24,7 +24,7 @@ export function EditorialWordmark({
 
 /** Bottom line only: no box, radius, shadow or focus ring; the line darkens on focus. */
 export const editorialInput =
-  "block w-full appearance-none rounded-none border-0 border-b border-ink/30 bg-transparent px-0 py-3 text-xl text-ink shadow-none outline-none ring-0 transition-colors placeholder:text-muted/50 focus:border-ink focus:ring-0 focus:outline-none aria-[invalid=true]:border-red-600 [&:-webkit-autofill]:[-webkit-text-fill-color:var(--color-ink)] [&:-webkit-autofill]:[transition:background-color_9999s]";
+  "block w-full appearance-none rounded-none border-0 border-b border-ink/30 bg-transparent px-0 py-3 text-xl text-ink shadow-none outline-none ring-0 transition-colors placeholder:text-muted/50 focus:border-ink focus:ring-0 focus:outline-none aria-[invalid=true]:border-danger [&:-webkit-autofill]:[-webkit-text-fill-color:var(--color-ink)] [&:-webkit-autofill]:[transition:background-color_9999s]";
 
 /** Large pill that sizes to its label. */
 export const editorialButton =

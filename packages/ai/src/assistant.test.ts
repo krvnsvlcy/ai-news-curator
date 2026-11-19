@@ -2,7 +2,16 @@ import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { AiError, createAssistant, FALLBACK_MODEL, MODEL } from "./assistant.js";
-import { briefingPrompt, type SourceStory, storyHeadlinePrompt, systemPrompt } from "./prompts.js";
+import {
+  briefingPrompt,
+  DEFAULT_PROMPTS,
+  draftLetterPrompt,
+  fillPrompt,
+  resolvePrompts,
+  type SourceStory,
+  storyHeadlinePrompt,
+  systemPrompt,
+} from "./prompts.js";
 
 const stories: [SourceStory, SourceStory] = [
   {
@@ -116,6 +125,62 @@ describe("prompts", () => {
     });
     expect(p).toContain("<our_headline>Current one</our_headline>");
     expect(p).toContain("- Other joke");
+  });
+});
+
+describe("configurable prompts", () => {
+  it("layers stored overrides on the defaults, ignoring blanks and unknown keys", () => {
+    const p = resolvePrompts({ briefing: "  Be brief.  ", storyHeadline: "   ", bogus: "x" });
+    expect(p.briefing).toBe("Be brief.");
+    expect(p.storyHeadline).toBe(DEFAULT_PROMPTS.storyHeadline);
+    expect(p).not.toHaveProperty("bogus");
+  });
+
+  it("fills known placeholders and leaves unknown ones", () => {
+    expect(fillPrompt("Pick {{ count }} for {{who}}", { count: "3 to 5" })).toBe(
+      "Pick 3 to 5 for {{who}}",
+    );
+  });
+
+  it("uses overridden texts in the prompts, keeping the story data", () => {
+    const p = resolvePrompts({
+      system: "Editor at {{publication}}.",
+      defaultTone: "Deadpan",
+      draftLetter: "Choose {{count}} stories.",
+    });
+    expect(systemPrompt("Curator Daily", p)).toBe("Editor at Curator Daily.");
+    const draft = draftLetterPrompt(
+      { stories, date: "2026-11-19", minHighlights: 3, maxHighlights: 5 },
+      p,
+    );
+    expect(draft).toContain("<publisher>GOV.UK</publisher>");
+    expect(draft).toContain("Editorial tone requested by the editor: Deadpan");
+    expect(draft).toContain("Choose 3 to 5 stories.");
+  });
+
+  it("loads overrides for every request, falling back to defaults if loading fails", async () => {
+    const { model, calls } = fakeModel({ briefing: "Done." });
+    let overrides: Record<string, string> = { system: "Custom for {{publication}}" };
+    const ai = createAssistant({
+      publicationName: "P",
+      model,
+      loadPrompts: async () => {
+        if (!overrides) throw new Error("db down");
+        return overrides;
+      },
+    });
+    await ai.writeBriefing({ stories });
+    expect(calls[0]?.instructions).toBe("Custom for P");
+
+    overrides = { briefing: "Two lines, please." };
+    await ai.writeBriefing({ stories });
+    expect(calls[1]?.instructions).toBe(systemPrompt("P"));
+    expect(calls[1]?.prompt).toContain("Two lines, please.");
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    overrides = undefined as unknown as Record<string, string>;
+    await ai.writeBriefing({ stories });
+    expect(calls[2]?.prompt).toContain(DEFAULT_PROMPTS.briefing);
   });
 });
 

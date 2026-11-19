@@ -4,10 +4,13 @@ export function PageHeader({
   title,
   description,
   actions,
+  tabs,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  /** Shown under the title and description, e.g. a section switcher. */
+  tabs?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-10 shrink-0 bg-surface/75 backdrop-blur-md">
@@ -17,6 +20,7 @@ export function PageHeader({
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold tracking-tight">{title}</h1>
           {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
+          {tabs && <div className="mt-3">{tabs}</div>}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>

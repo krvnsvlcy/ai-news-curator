@@ -76,7 +76,7 @@ export function RefreshFeedButton({ sources }: { sources: Source[] }) {
                     ? "border-rule border-t-primary motion-safe:animate-spin"
                     : failed.length
                       ? "border-amber-500 text-amber-700"
-                      : "border-sea bg-sea text-paper"
+                      : "border-blue bg-blue text-paper"
                 }`}
               >
                 {!running &&

@@ -15,7 +15,7 @@ export default async function LoginPage({
   if (await isAuthenticated()) redirect(safeRedirectPath(from));
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-4 py-16">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-4 py-16">
       <div className="w-full max-w-sm text-center">
         <EditorialWordmark className="text-3xl" />
         <h1 className="mt-10 font-serif text-[32px] leading-tight tracking-tight">Welcome back.</h1>

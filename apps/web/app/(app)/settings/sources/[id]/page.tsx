@@ -40,7 +40,7 @@ export default async function EditSourcePage({ params }: { params: Promise<{ id:
           submitLabel="Save changes"
         />
 
-        <Panel className="mt-6 border-red-600/25">
+        <Panel className="mt-6 border-danger/25">
           <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-[14px] font-medium">Delete source</h2>

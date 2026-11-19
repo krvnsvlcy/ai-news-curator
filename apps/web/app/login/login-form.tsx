@@ -38,7 +38,7 @@ export function LoginForm({ from, hint }: { from?: string; hint?: string }) {
       <p
         id="password-error"
         role="alert"
-        className="mt-2 min-h-5 text-center text-[13px] text-red-600"
+        className="mt-2 min-h-5 text-center text-[13px] text-danger"
       >
         {state.error}
       </p>

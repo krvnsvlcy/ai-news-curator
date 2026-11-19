@@ -245,7 +245,7 @@ function StoryCard({
                 <button
                   type="button"
                   onClick={onRemove}
-                  className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-muted hover:bg-red-50 hover:text-red-700"
+                  className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12.5px] text-muted hover:bg-red-50 hover:text-danger"
                   aria-label={`Remove story ${index + 1} from letter`}
                 >
                   <TrashIcon className="size-3.5" /> Remove

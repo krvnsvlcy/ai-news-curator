@@ -1,4 +1,4 @@
-export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger" | "dangerSolid";
 
 /** Shared by server and client components, so it must not live in a "use client" file. */
 export function buttonClass(variant: ButtonVariant): string {
@@ -12,6 +12,8 @@ export function buttonClass(variant: ButtonVariant): string {
     case "quiet":
       return `${base} text-muted hover:bg-hover hover:text-ink`;
     case "danger":
-      return `${base} border border-red-600/30 bg-paper text-red-700 hover:bg-red-50`;
+      return `${base} border border-danger/30 bg-paper text-danger hover:bg-red-50`;
+    case "dangerSolid":
+      return `${base} bg-danger text-white hover:bg-danger-hover`;
   }
 }

@@ -55,7 +55,7 @@ export function LetterPreview({
           ))}
         </fieldset>
       </div>
-      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-[#e9e7e1]">
+      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-canvas">
         <iframe
           title="Email preview"
           srcDoc={html}

@@ -3,7 +3,7 @@ import { type LetterStatus, STATUS_LABEL } from "@/lib/letters";
 const STYLES: Record<LetterStatus, string> = {
   draft: "bg-chip text-muted",
   ready: "bg-amber-100 text-amber-900",
-  published: "bg-sea/15 text-sea",
+  published: "bg-blue/15 text-blue",
 };
 
 export function LetterStatusBadge({ status }: { status: LetterStatus }) {
@@ -13,7 +13,7 @@ export function LetterStatusBadge({ status }: { status: LetterStatus }) {
     >
       <span
         aria-hidden
-        className={`size-1.5 rounded-full ${status === "draft" ? "bg-muted/60" : status === "ready" ? "bg-amber-500" : "bg-sea"}`}
+        className={`size-1.5 rounded-full ${status === "draft" ? "bg-muted/60" : status === "ready" ? "bg-amber-500" : "bg-blue"}`}
       />
       {STATUS_LABEL[status]}
     </span>

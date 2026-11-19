@@ -172,7 +172,7 @@ export function SubscribersManager({
         {message && (
           <p
             role={message.kind === "error" ? "alert" : "status"}
-            className={`mt-2 text-[12.5px] ${message.kind === "error" ? "text-red-600" : "text-sea"}`}
+            className={`mt-2 text-[12.5px] ${message.kind === "error" ? "text-danger" : "text-blue"}`}
           >
             {message.text}
           </p>

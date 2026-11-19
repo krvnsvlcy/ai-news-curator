@@ -32,7 +32,7 @@ export function AiButton({
 export function AiError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mt-2 text-[12.5px] text-red-600">
+    <p role="alert" className="mt-2 text-[12.5px] text-danger">
       {message}
     </p>
   );

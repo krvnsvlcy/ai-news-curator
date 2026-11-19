@@ -100,7 +100,7 @@ export function ExternalStoryDialog({
           />
         </label>
         {error && (
-          <p role="alert" className="text-[12.5px] text-red-600">
+          <p role="alert" className="text-[12.5px] text-danger">
             {error}
           </p>
         )}

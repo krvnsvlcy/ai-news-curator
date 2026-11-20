@@ -4,7 +4,7 @@ import Link from "next/link";
 // underline inputs, ink pill buttons. Uses the shared color tokens.
 
 export function EditorialWordmark({
-  name = "Curator",
+  name = "The Curator",
   href = "/",
   className = "",
 }: {

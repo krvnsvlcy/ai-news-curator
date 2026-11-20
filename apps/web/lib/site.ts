@@ -1,7 +1,7 @@
 /** Site identity shared by metadata, icons, the social image and the manifest. */
 export const SITE = {
-  name: "News Curator",
-  shortName: "Curator",
+  name: "The Curator",
+  shortName: "The Curator",
   description:
     "Curate the day's news into a polished newsletter: gather sources, shape the stories, and send.",
   // Mirrors the theme tokens in app/globals.css.

@@ -1,4 +1,4 @@
-# AI News Curator
+# The Curator
 
 An AI-assisted news and newsletter workspace built as a demo by Business OS Studio. It collects news, helps draft and edit daily letters, publishes them by email, and tracks engagement.
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { PartialLetterDraft } from "@curator/ai";
+import posthog from "posthog-js";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import type { DraftEvent } from "@/app/api/letters/draft/route";
 import { type ButtonVariant, buttonClass } from "@/components/button-styles";
@@ -219,6 +220,7 @@ function NewLetterDialog({ onClose }: { onClose: () => void }) {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    posthog.capture("letter_generation_started", { has_custom_tone: Boolean(tone.trim()) });
     void generate("sources");
   }
 

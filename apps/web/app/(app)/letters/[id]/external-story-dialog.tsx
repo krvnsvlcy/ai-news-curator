@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { type FormEvent, useState } from "react";
 import { buttonClass } from "@/components/button-styles";
 import { Modal } from "@/components/modal";
@@ -34,6 +35,7 @@ export function ExternalStoryDialog({
       description: v.description.trim(),
       original: { url: v.url.trim(), title: v.title.trim(), sourceName: v.sourceName.trim() },
     });
+    posthog.capture("external_story_added");
     setV(EMPTY);
     setError(undefined);
     onClose();

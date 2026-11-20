@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -51,7 +52,10 @@ export function DeleteLetterButton({
           startTransition(async () => {
             const res = await deleteLetterAction(id, { stay });
             if (res && !res.ok) setError(res.error);
-            else setOpen(false);
+            else {
+              posthog.capture("letter_deleted");
+              setOpen(false);
+            }
           })
         }
       >

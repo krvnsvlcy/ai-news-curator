@@ -25,6 +25,26 @@ export const MODEL = "anthropic/claude-opus-5.5";
 /** Tried by the gateway if the main model fails or is unavailable. */
 export const FALLBACK_MODEL = "anthropic/claude-sonnet-5.5";
 
+// There is no persistent conversation or individual user in this shared-password
+// app, so the server process is the AI Observability session.
+const aiSessionId = `newsletter-editor:${crypto.randomUUID()}`;
+
+function telemetry(operation: string) {
+  return {
+    runtimeContext: {
+      sessionId: aiSessionId,
+      traceName: operation,
+    },
+    telemetry: {
+      functionId: operation,
+      includeRuntimeContext: {
+        sessionId: true,
+        traceName: true,
+      },
+    },
+  };
+}
+
 /** An error whose message is safe and useful to show to the editor. */
 export class AiError extends Error {}
 
@@ -174,6 +194,7 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
     p: PromptTexts,
     prompt: string,
     schema: T,
+    operation: string,
   ): Promise<z.infer<T>> {
     const instructions = systemPrompt(publicationName, p);
     try {
@@ -185,6 +206,7 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
         maxOutputTokens: 16000,
         timeout: 120_000,
         providerOptions: { gateway: { models: [FALLBACK_MODEL] } },
+        ...telemetry(operation),
       });
       if (result.finishReason === "content-filter") {
         throw new AiError(
@@ -205,6 +227,7 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
     p: PromptTexts,
     prompt: string,
     schema: T,
+    operation: string,
     onPartial: (partial: DeepPartial<z.infer<T>>) => void,
     abortSignal?: AbortSignal,
   ): Promise<z.infer<T>> {
@@ -220,6 +243,7 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
         timeout: 180_000,
         abortSignal,
         providerOptions: { gateway: { models: [FALLBACK_MODEL] } },
+        ...telemetry(operation),
         onError: ({ error }) => {
           streamError ??= error;
         },
@@ -255,7 +279,12 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
     }): Promise<string[]> {
       requireStories(input.stories);
       const p = await prompts();
-      const out = await run(p, letterHeadlinePrompt(input, p), headlinesSchema);
+      const out = await run(
+        p,
+        letterHeadlinePrompt(input, p),
+        headlinesSchema,
+        "newsletter.suggest_letter_headlines",
+      );
       const headlines = uniqueNonEmpty(out.headlines, 3);
       if (!headlines.length) throw new AiError("Claude didn't suggest any headlines. Try again.");
       return headlines;
@@ -270,7 +299,12 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
     }): Promise<string> {
       requireStories(input.stories);
       const p = await prompts();
-      const out = await run(p, briefingPrompt(input, p), briefingSchema);
+      const out = await run(
+        p,
+        briefingPrompt(input, p),
+        briefingSchema,
+        "newsletter.write_briefing",
+      );
       const briefing = cleanParagraphs(out.briefing);
       if (!briefing) throw new AiError("Claude returned an empty briefing. Try again.");
       return briefing;
@@ -298,6 +332,7 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
         p,
         draftLetterPrompt({ ...input, minHighlights: MIN_DRAFT_STORIES, maxHighlights }, p),
         draftSchema,
+        "newsletter.draft_letter",
         onPartial,
         signal,
       );
@@ -329,7 +364,12 @@ export function createAssistant({ publicationName, model = MODEL, loadPrompts }:
       otherHeadlines?: string[];
     }): Promise<string[]> {
       const p = await prompts();
-      const out = await run(p, storyHeadlinePrompt(input, p), headlinesSchema);
+      const out = await run(
+        p,
+        storyHeadlinePrompt(input, p),
+        headlinesSchema,
+        "newsletter.suggest_story_headlines",
+      );
       const headlines = uniqueNonEmpty(out.headlines, 3);
       if (!headlines.length) throw new AiError("Claude didn't suggest any headlines. Try again.");
       return headlines;

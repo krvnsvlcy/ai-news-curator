@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { buttonClass } from "@/components/button-styles";
@@ -20,14 +21,21 @@ export function RefreshFeedButton({ sources }: { sources: Source[] }) {
 
   async function refresh() {
     setRun({ outcomes: {}, done: false });
-    await Promise.all(
+    const outcomes = await Promise.all(
       sources.map(async (s) => {
         const outcome: RefreshOutcome = await refreshSourceAction(s.id).catch(() => ({
           status: "error" as const,
         }));
         setRun((r) => r && { ...r, outcomes: { ...r.outcomes, [s.id]: outcome } });
+        return outcome;
       }),
     );
+    const successful = outcomes.filter((outcome) => outcome.status === "ok");
+    posthog.capture("feed_refresh_completed", {
+      source_count: sources.length,
+      successful_source_count: successful.length,
+      new_story_count: successful.reduce((total, outcome) => total + outcome.newCount, 0),
+    });
     setRun((r) => r && { ...r, done: true });
     router.refresh();
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { type FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
 import { TrashIcon } from "@/components/icons";
@@ -74,6 +75,7 @@ export function SubscribersManager({
       const ok = outcome === "added" || outcome === "linked";
       setMessage({ kind: ok ? "ok" : "error", text });
       if (ok) {
+        posthog.capture("subscribers_added", { subscriber_count: 1, method: "single" });
         setEmail("");
       }
     });
@@ -98,15 +100,21 @@ export function SubscribersManager({
         text: `${parts.join(" · ")}.`,
       });
       if (r.added) {
+        posthog.capture("subscribers_added", { subscriber_count: r.added, method: "bulk" });
         setBulk("");
         setBulkOpen(false);
       }
     });
   }
 
-  function act(fn: () => Promise<unknown>) {
+  function act(
+    fn: () => Promise<unknown>,
+    event?: "subscriber_removed" | "subscriber_list_cleared",
+    properties?: Record<string, number>,
+  ) {
     start(async () => {
       await fn();
+      if (event) posthog.capture(event, properties);
     });
   }
 
@@ -202,7 +210,12 @@ export function SubscribersManager({
               onClick={() =>
                 confirm(
                   `Remove all ${subscribers.length} addresses from your list? Other lists keep theirs.`,
-                ) && act(clearSubscribersAction)
+                ) &&
+                act(
+                  clearSubscribersAction,
+                  "subscriber_list_cleared",
+                  { subscriber_count: subscribers.length },
+                )
               }
               className={buttonClass("quiet")}
             >
@@ -248,7 +261,7 @@ export function SubscribersManager({
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => act(() => removeSubscriberAction(s.id))}
+                  onClick={() => act(() => removeSubscriberAction(s.id), "subscriber_removed")}
                   aria-label={`Remove ${s.email} from your list`}
                   title="Remove from your list. Letters you send won't go to this address."
                   className={`${buttonClass("secondary")} self-start sm:self-auto`}

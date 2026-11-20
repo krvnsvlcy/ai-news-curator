@@ -8,6 +8,7 @@ import {
   readinessProblems,
 } from "@curator/newsletter";
 import Link from "next/link";
+import posthog from "posthog-js";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { buttonClass } from "@/components/button-styles";
@@ -144,6 +145,7 @@ export function LetterEditor({
         return;
       }
       setLetter((l) => ({ ...l, ...res.letter, ...contentOf(l) }));
+      posthog.capture("letter_status_changed", { status: to, story_count: letter.stories.length });
       setBanner({
         kind: "success",
         text: to === "ready" ? "Marked ready" : "Moved back to draft",
@@ -168,6 +170,11 @@ export function LetterEditor({
       }
       setPublishOpen(false);
       const failed = res.failed.length;
+      posthog.capture("letter_published", {
+        delivered_count: res.delivered,
+        failed_count: failed,
+        story_count: letter.stories.length,
+      });
       setLetter((l) => ({ ...l, ...res.letter, ...contentOf(l) }));
       setBanner({
         kind: failed ? "notice" : "success",
@@ -211,6 +218,7 @@ export function LetterEditor({
     setLetter((l) => ({ ...l, stories: [...l.stories, story] }));
 
   function addArticle(a: PickerArticle) {
+    posthog.capture("article_added_to_letter", { story_count_before: letter.stories.length });
     setLetter((l) => {
       if (l.stories.some((s) => s.articleId === a.id)) return l;
       return {

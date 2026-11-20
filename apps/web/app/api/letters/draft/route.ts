@@ -1,7 +1,9 @@
 import { AiError, type PartialLetterDraft } from "@curator/ai";
+import { after } from "next/server";
 import { z } from "zod";
 import { getAssistant } from "@/lib/ai";
 import { isAuthenticated } from "@/lib/auth/session";
+import { flushPostHogLogs, logLetterDraftLifecycle } from "@/lib/posthog-logs";
 import {
   type DraftPreview,
   dateSchema,
@@ -30,6 +32,8 @@ export async function POST(req: Request) {
     .safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new Response("Invalid request", { status: 400 });
   const { date, tone } = parsed.data;
+  logLetterDraftLifecycle("accepted");
+  after(flushPostHogLogs);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -58,8 +62,10 @@ export async function POST(req: Request) {
           req.signal,
         );
         send({ type: "done", draft: toPreview(draft, articles, date, tone) });
+        logLetterDraftLifecycle("completed");
       } catch (err) {
         if (req.signal.aborted) return;
+        logLetterDraftLifecycle("failed");
         if (!(err instanceof AiError)) console.error("[generate] draft failed", err);
         send({
           type: "error",

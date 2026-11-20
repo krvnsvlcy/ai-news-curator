@@ -44,6 +44,13 @@ describe.skipIf(!url)("articles by London day (integration)", () => {
     expect(await db.listArticlesForDay("2026-07-15", 2)).toHaveLength(2);
   });
 
+  it("lists earlier days' articles, most recent first", async () => {
+    const earlier = await db.listArticlesBeforeDay("2026-07-15", 5);
+    expect(earlier.map((a: { externalId: string }) => a.externalId)).toEqual(["before", "jan"]);
+    expect(await db.listArticlesBeforeDay("2026-07-15", 1)).toHaveLength(1);
+    expect(await db.listArticlesBeforeDay("2026-07-15", 0)).toEqual([]);
+  });
+
   it("finds articles by id, skipping unknown and malformed ids", async () => {
     const found = await db.getArticlesByIds([ids[0], "f".repeat(24), "nope", ids[1]]);
     expect(found).toHaveLength(2);

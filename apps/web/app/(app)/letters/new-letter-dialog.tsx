@@ -405,7 +405,7 @@ function Working({ date, today, run }: { date: string; today: string; run: Run }
             state={steps.news}
             title={
               run.news
-                ? `Found ${plural(run.news.stories, "story", "stories")} from ${plural(run.news.bySource.length, "source")}`
+                ? `Found ${plural(run.news.stories, "story", "stories")} from ${plural(run.news.bySource.length, "source")}${run.news.earlier ? ` (${run.news.earlier} from earlier days)` : ""}`
                 : "Gathering the day's news"
             }
           >

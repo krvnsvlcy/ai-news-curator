@@ -153,6 +153,17 @@ export async function listArticlesForDay(day: string, limit = 150): Promise<Arti
     .toArray();
 }
 
+/** Articles published before a London calendar day starts, newest first. */
+export async function listArticlesBeforeDay(day: string, limit: number): Promise<ArticleDoc[]> {
+  if (limit <= 0) return [];
+  const { articles } = await collections();
+  return articles
+    .find({ publishedAt: { $lt: londonMidnight(day) } })
+    .sort({ publishedAt: -1 })
+    .limit(limit)
+    .toArray();
+}
+
 /** Articles by id (hex strings); unknown or malformed ids are skipped. */
 export async function getArticlesByIds(ids: string[]): Promise<ArticleDoc[]> {
   const valid = ids.filter((id) => /^[0-9a-f]{24}$/.test(id)).map((id) => new ObjectId(id));

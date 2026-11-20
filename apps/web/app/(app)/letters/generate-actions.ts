@@ -6,6 +6,7 @@ import {
   getArticlesByIds,
   getSource,
   listSources,
+  londonMidnight,
   saveLetterContent,
   todayInLondon,
 } from "@curator/db";
@@ -69,6 +70,8 @@ export async function refreshSourceAction(id: string): Promise<RefreshOutcome> {
 
 export interface DayNews {
   stories: number;
+  /** How many of the stories were borrowed from earlier days to make up a thin day. */
+  earlier: number;
   bySource: { name: string; count: number }[];
   /** Every candidate, in the order Claude sees them (for the live "reading" view). */
   candidates: { title: string; sourceName: string }[];
@@ -85,8 +88,8 @@ export async function dayNewsAction(rawDate: string): Promise<StepResult<DayNews
       ok: false,
       error:
         articles.length === 0
-          ? "No stories were found for that day. Check your sources in Settings, or pick another date."
-          : `Only ${articles.length} ${articles.length === 1 ? "story was" : "stories were"} found for that day; a letter needs at least ${MIN_DRAFT_STORIES}. Pick another date.`,
+          ? "No stories were found. Check your sources in Settings, or pick another date."
+          : `Only ${articles.length} ${articles.length === 1 ? "story is" : "stories are"} stored, on that day or before it; a letter needs at least ${MIN_DRAFT_STORIES}. Pick another date.`,
     };
   }
   const counts = new Map<string, number>();
@@ -95,6 +98,7 @@ export async function dayNewsAction(rawDate: string): Promise<StepResult<DayNews
     ok: true,
     value: {
       stories: articles.length,
+      earlier: articles.filter((a) => a.publishedAt < londonMidnight(parsed.data)).length,
       bySource: [...counts]
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count),

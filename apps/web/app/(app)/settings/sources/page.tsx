@@ -9,7 +9,7 @@ import { requireSession } from "@/lib/auth/session";
 import { formatDateTime, formatInterval, timeAgo } from "@/lib/format";
 import { fetchSourceNowAction, seedDefaultsAction, toggleSourceAction } from "./actions";
 
-export const metadata = { title: "Sources · Settings · AI News Curator" };
+export const metadata = { title: "Sources · Settings" };
 
 const COLS = "md:grid md:grid-cols-[minmax(0,1fr)_170px_80px_110px_auto] md:items-center md:gap-4";
 

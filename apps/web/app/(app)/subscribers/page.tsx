@@ -6,7 +6,7 @@ import { currentOwnerId } from "@/lib/owner-server";
 import type { Subscriber } from "@/lib/subscribers";
 import { SubscribersManager } from "./subscribers-manager";
 
-export const metadata = { title: "Subscribers · AI News Curator" };
+export const metadata = { title: "Subscribers" };
 
 export default async function SubscribersPage() {
   await requireSession();

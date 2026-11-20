@@ -3,7 +3,7 @@ import { PageBody, PageHeader } from "@/components/page";
 import { requireSession } from "@/lib/auth/session";
 import { LettersBrowser, NewLetterButton, parseLetterQuery } from "./letter-list";
 
-export const metadata = { title: "Letters · AI News Curator" };
+export const metadata = { title: "Letters" };
 
 export default async function LettersPage({
   searchParams,

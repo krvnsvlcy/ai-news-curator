@@ -5,7 +5,7 @@ import { SettingsTabs } from "@/components/settings-tabs";
 import { requireSession } from "@/lib/auth/session";
 import { PromptEditor } from "./prompt-editor";
 
-export const metadata = { title: "Prompts · Settings · AI News Curator" };
+export const metadata = { title: "Prompts · Settings" };
 
 export default async function PromptsPage() {
   await requireSession();

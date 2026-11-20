@@ -8,7 +8,7 @@ import { DeleteSourceButton } from "../delete-button";
 import { valuesFromSource } from "../form-values";
 import { SourceForm } from "../source-form";
 
-export const metadata = { title: "Edit source · AI News Curator" };
+export const metadata = { title: "Edit source" };
 
 export default async function EditSourcePage({ params }: { params: Promise<{ id: string }> }) {
   await requireSession();

@@ -37,6 +37,10 @@ export async function proxy(request: NextRequest) {
   return withOwner(NextResponse.redirect(url));
 }
 
+// Skipped entirely: build assets and the public metadata files (favicon, social
+// preview images, manifest, robots) that browsers and link crawlers fetch signed out.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|icon.svg|apple-icon|opengraph-image|twitter-image|manifest.webmanifest).*)",
+  ],
 };

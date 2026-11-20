@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AttributionCredit } from "@/components/attribution-credit";
 import { EditorialWordmark } from "@/components/editorial";
@@ -6,7 +7,11 @@ import { getPasswordHint } from "@/lib/auth/config";
 import { isAuthenticated, safeRedirectPath } from "@/lib/auth/session";
 import { LoginForm } from "./login-form";
 
-export const metadata = { title: "Sign in · AI News Curator" };
+export const metadata: Metadata = {
+  title: "Sign in",
+  alternates: { canonical: "/login" },
+  robots: { index: true, follow: false },
+};
 
 export default async function LoginPage({
   searchParams,

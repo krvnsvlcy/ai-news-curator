@@ -5,7 +5,7 @@ import { saveSource } from "../actions";
 import { EMPTY_SOURCE } from "../form-values";
 import { SourceForm } from "../source-form";
 
-export const metadata = { title: "New source · AI News Curator" };
+export const metadata = { title: "New source" };
 
 export default async function NewSourcePage() {
   await requireSession();

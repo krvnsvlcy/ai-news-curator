@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/auth/session";
 import { LettersBrowser, NewLetterButton, parseLetterQuery } from "./letters/letter-list";
 import { parseRange, RangePicker, Trends } from "./trends";
 
-export const metadata = { title: "Home · AI News Curator" };
+export const metadata = { title: "Home" };
 
 export default async function OverviewPage({
   searchParams,

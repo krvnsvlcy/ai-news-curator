@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/auth/session";
 import { formatDateTime, timeAgo } from "@/lib/format";
 import { RefreshFeedButton } from "./refresh-feed-button";
 
-export const metadata = { title: "Feed · AI News Curator" };
+export const metadata = { title: "Feed" };
 
 const PAGE_SIZE = 50;
 

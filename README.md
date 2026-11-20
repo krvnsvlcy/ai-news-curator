@@ -4,6 +4,8 @@ An AI-assisted news and newsletter workspace built as a demo by Business OS Stud
 
 **Demo:** [ai-news-curator-rust.vercel.app](https://ai-news-curator-rust.vercel.app). The deployed app uses a shared-password login and is intended only for private evaluation, not public use or a public multi-user service. The source code is MIT-licensed.
 
+![The Curator dashboard: subscriber, open-rate and click-rate trends above the list of letters](docs/screenshots/dashboard.png)
+
 ## Current capabilities
 
 - Store RSS/Atom and Guardian articles in MongoDB; browse and refresh the feed by source.
@@ -14,6 +16,25 @@ An AI-assisted news and newsletter workspace built as a demo by Business OS Stud
 - Configure sources and AI prompts in Settings; optionally show a “Built by Business OS Studio” credit.
 
 The feed displays stored news chronologically. `packages/core` retains a baseline keyword scorer; it is not the feed's AI ranking engine. AI-assisted story selection happens during letter drafting.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/letter-editor.png" alt="Letter editor: headline, editorial tone and daily briefing with AI suggestions, beside a live email preview"></td>
+    <td width="50%"><img src="docs/screenshots/letter-analytics.png" alt="Letter analytics: emails delivered, unique clickers, total clicks and clicks per story"></td>
+  </tr>
+  <tr>
+    <td><b>Letter editor.</b> Edit the headline and briefing, ask AI for suggestions, and see the email exactly as subscribers will.</td>
+    <td><b>Letter analytics.</b> Delivery, clickers and clicks per story for each published edition.</td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/feed.png" alt="Feed: latest stories from GOV.UK, Sky News, The Guardian and UK Parliament, filterable by source"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>Feed.</b> Stored stories from every source, newest first, filterable by source.</td>
+  </tr>
+</table>
 
 ## Layout
 

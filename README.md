@@ -1,22 +1,44 @@
 # AI News Curator
 
-pnpm monorepo that ingests news feeds, scores articles for AI relevance, and serves a curated feed.
+An AI-assisted news and newsletter workspace built as a demo by Business OS Studio. It collects news, helps draft and edit daily letters, publishes them by email, and tracks engagement.
+
+**Demo:** [ai-news-curator-rust.vercel.app](https://ai-news-curator-rust.vercel.app). The deployed app uses a shared-password login and is intended only for private evaluation, not public use or a public multi-user service. The source code is MIT-licensed.
+
+## Current capabilities
+
+- Store RSS/Atom and Guardian articles in MongoDB; browse and refresh the feed by source.
+- Generate a daily letter with Claude, then edit its headline, briefing, story selection and order, or start blank.
+- Preview desktop/mobile email layouts, manage draft → ready → published editions, and duplicate past letters.
+- Manage browser-associated subscriber lists and publish ready letters through SMTP.
+- View subscriber, open and click trends plus per-letter delivery and story-click analytics.
+- Configure sources and AI prompts in Settings; optionally show a “Built by Business OS Studio” credit.
+
+The feed displays stored news chronologically. `packages/core` retains a baseline keyword scorer; it is not the feed's AI ranking engine. AI-assisted story selection happens during letter drafting.
 
 ## Layout
 
-| Path                | Package             | Purpose                                                |
-| ------------------- | ------------------- | ------------------------------------------------------ |
-| `apps/web`          | `@curator/web`      | Next.js app that renders the curated feed              |
-| `apps/worker`       | `@curator/worker`   | Fetches RSS/Atom feeds and runs curation               |
-| `packages/core`     | `@curator/core`     | Shared types (`Article`, `CuratedArticle`) and scoring |
-| `packages/tsconfig` | `@curator/tsconfig` | Shared TypeScript configs                              |
+| Path | Purpose |
+| --- | --- |
+| `apps/web` | Next.js editorial workspace, login, publishing and analytics |
+| `apps/worker` | Recurring or one-off source ingestion |
+| `packages/db` | MongoDB persistence for articles, sources, letters, subscribers and analytics |
+| `packages/ingest` | RSS/Atom and Guardian adapters |
+| `packages/ai` | AI drafting, headline suggestions and configurable prompts |
+| `packages/newsletter` | HTML/plain-text email rendering and readiness checks |
+| `packages/mailer` | SMTP delivery |
+| `packages/tracking` | Signed click/open tracking links and reader identifiers |
+| `packages/core` | Shared article types and baseline keyword scoring |
+| `packages/tsconfig` | Shared TypeScript configuration |
 
 ## Getting started
+
+Use Node.js 24 (see `.nvmrc`) and pnpm. Create the environment files first, then fill in MongoDB credentials, `AUTH_PASSWORD` and a generated `AUTH_SECRET` of at least 32 characters before starting the app. AI drafting needs AI Gateway access; Guardian ingestion needs its API key; email delivery needs SMTP configuration.
 
 ```sh
 pnpm install
 cp .env.example .env                         # worker: Mongo + Guardian key
 cp apps/web/.env.example apps/web/.env.local # web: auth + Mongo + Guardian key
+# Fill in the environment files before continuing.
 pnpm build                                   # packages must be built before the apps run
 pnpm --filter @curator/worker seed           # add the default sources (or use the Sources page)
 pnpm --filter @curator/worker once           # fetch everything that's due, then exit
@@ -25,18 +47,18 @@ pnpm --filter @curator/web dev
 
 ## Sourcing
 
-Sources live in the `sources` collection and are managed at `/sources` in the web app (add, edit, pause, delete, fetch now).
+Sources live in the `sources` collection and are managed at `/settings/sources` in the web app (add, edit, pause, delete, fetch now).
 Two kinds are supported:
 
 - `feed`: any RSS 2.0 or Atom URL.
-- `guardian`: the Guardian Content API, filtered by section (`politics|uk-news`) and/or a search query. Needs `GUARDIAN_API_KEY`.
+- `guardian`: the Guardian Content API, filtered by section (for example, politics or UK news) and/or a search query. Needs `GUARDIAN_API_KEY`.
 
 Default sources (`pnpm --filter @curator/worker seed`, or "Add default sources" on an empty Sources page):
 
 | Source        | Kind     | Endpoint                                                 |
 | ------------- | -------- | -------------------------------------------------------- |
 | Sky News      | feed     | `https://feeds.skynews.com/feeds/rss/uk.xml`             |
-| The Guardian  | guardian | sections `politics                                       | uk-news | business | society` |
+| The Guardian  | guardian | sections: politics, uk-news, business, society |
 | GOV.UK        | feed     | `https://www.gov.uk/search/news-and-communications.atom` |
 | UK Parliament | feed     | `https://bills.parliament.uk/rss/allbills.rss`           |
 
@@ -44,7 +66,7 @@ parliament.uk's news and committee feeds sit behind a Cloudflare bot challenge, 
 
 Articles are stored in `articles`, unique per source + external id (RSS guid, Atom id or Guardian id), so re-fetching updates existing stories instead of duplicating them.
 
-The worker (`pnpm --filter @curator/worker start`) checks every minute and fetches each enabled source once its interval has elapsed. Each fetch records `lastFetchedAt`, `lastStatus`, `lastError` and counts on the source; the Sources page shows them.
+The worker (`pnpm --filter @curator/worker start`) checks every minute and fetches each enabled source once its interval has elapsed. The worker must run separately from the web app for automatic polling; the web app also supports manual refresh. Each fetch records `lastFetchedAt`, `lastStatus`, `lastError` and counts on the source; the Sources page shows them.
 
 ### Tests against MongoDB
 
@@ -66,17 +88,16 @@ A letter is one edition of the daily email: headline, publication date, a 60–1
 - **New letter walkthrough:** **New letter** opens a dialog that drafts a whole edition. Pick the date (today by default) and optionally a tone; it refreshes each source (for today or yesterday; each shows its result as it comes back), gathers that London day's stories, and Claude picks the 3 to 5 most important distinct ones and writes a headline and summary for each, then the edition headline and briefing. The draft streams in (`POST /api/letters/draft`, newline-delimited JSON), so you watch the day's headlines being read and then the letter being written; cancelling stops the model call. The letter is then created as a draft and opened in the editor, every story linked to its source article, ready to edit. **Start blank instead** creates an empty letter.
 - **AI assistance** (`@curator/ai`, Claude Opus 5.5 via the [Vercel AI SDK](https://ai-sdk.dev) and **AI Gateway**): the walkthrough above, plus suggesting letter headlines, writing or revising the briefing, and rewriting story headlines in the editor, in an editorial tone you choose. Prompts are grounded in the supplied stories only, and the editor reviews everything. Needs `AI_GATEWAY_API_KEY` in `apps/web/.env.local` (on Vercel, OIDC works without a key). If Opus fails, the gateway falls back to Claude Sonnet 5.5.
 
-## Subscribers and sending (demo)
+## Subscribers and publishing (demo)
 
 Subscribers are managed by the editors only: there's no public signup page and no unsubscribe link. They're stored in MongoDB (`subscribers` collection), one row per address, deduped by lowercased email. There are no user accounts (one shared password), so lists are **per browser**: each browser gets an opaque random id in a long-lived `curator_owner` cookie (issued by the proxy, kept across sign-out), and each subscriber row lists the browsers that reference it (`ownerIds`).
 
 - Everyone sees the **total** number of subscribers (in the side nav and on `/subscribers`), but only the details of addresses on their own list.
 - `/subscribers` (signed in): add one or paste a list, search, remove, clear (your list only). Adding an address that already exists doesn't duplicate it: it's linked to your list. Removing an address is how you unsubscribe it: it drops your reference only, and the row is deleted once no list references it.
 - A list left in this browser's `localStorage` by an older version is moved to the database the first time the page opens (addresses that had unsubscribed are left out). On startup, rows from older versions are migrated, and any that a reader had unsubscribed are deleted.
-- In the letter editor, **Send** opens a dialog:
-  - **Send a test**: any status, up to 5 addresses, subject prefixed with "[Test]".
-  - **Send to subscribers**: the letter must be _ready_ (or already published). It goes to every address on **your** list, looked up on the server (up to 200), so nobody can email addresses only other people added. A ready letter is published when at least one email is delivered; a published letter is always re-sent from its archived HTML.
-  - Each email gets its own tracked story links and includes a plain-text part. There are no subscription links; the footer says the editors added the reader to the list. Re-sending a letter published before this change drops the old footer links. The letter keeps a send history with counts only.
+- In the letter editor, **Publish** confirms sending a ready letter to this browser's subscriber list (up to 200 addresses). With recipients, at least one successful SMTP submission is required to publish; with no recipients, it publishes and archives the HTML without sending email.
+- Published letters are locked. Duplicate one to create a new editable edition. The current editor has no separate test-send or resend dialog.
+- Each email has tracked story links, an open pixel and a plain-text part. The footer explains that the editor added the recipient. Send history records counts; “delivered” means accepted by SMTP, not confirmed inbox delivery.
 - Delivery needs `SMTP_URL` and `SMTP_FROM` in `apps/web/.env.local`. Any SMTP provider works. For local testing, use [Mailpit](https://mailpit.axllent.org/):
 
   ```sh
@@ -104,13 +125,13 @@ Each sent letter has its own analytics page, `/letters/:letterId/analytics` (lin
 
 How it works, without storing addresses in analytics:
 
-- Every reader gets an **anonymous id**: an HMAC of their address keyed by `TRACKING_SECRET` (default: `AUTH_SECRET`). It's stable across letters, so readers can be counted, but can't be reversed without the secret.
+- Every reader gets a **pseudonymous id**: an HMAC of their address keyed by `TRACKING_SECRET` (default: `AUTH_SECRET`). It's stable across letters, so readers can be counted, but can't be reversed without the secret.
 - At send time each story link becomes `/r/<token>`, a signed token with the letter, story, reader id and test flag. `/r/…` records the click (in `email_events`) and redirects to the story URL **stored in the letter**, so it can't be used as an open redirect, and tampered tokens are rejected.
 - Mail providers that pre-scan links can add clicks; there's no bot filtering yet.
 
 ## Authentication
 
-The web app is an internal tool protected by one shared password.
+The demo is protected by one shared password, with no individual user accounts. Sources, letters and settings are shared; browser-associated subscriber lists are a demo convenience, not separate user workspaces.
 
 - `AUTH_PASSWORD`: the password everyone signs in with.
 - `AUTH_SECRET`: at least 32 characters, used to sign session cookies (`openssl rand -base64 32`).
@@ -126,8 +147,14 @@ In production the cookie is marked `Secure`, so the app must be served over HTTP
 - `pnpm build` / `pnpm typecheck` / `pnpm test` – run across all packages
 - `pnpm lint` / `pnpm format` – Biome
 
-## Next steps
+## Configuration notes
 
-- Persist worker output (database) and have `apps/web` read from it instead of sample data
-- Replace the keyword scorer in `packages/core/src/score.ts` with a model-based ranker/summarizer
-- Schedule the worker (cron or queue)
+- `APP_URL` sets the base URL for click/open tracking links in emails; it falls back to the current request origin.
+- `NEWSLETTER_NAME` and `NEWSLETTER_TAGLINE` customize the email branding.
+- `ATTRIBUTION_NAME=Business OS Studio` enables the existing “Built by …” credit on the login page and sidebar. `ATTRIBUTION_URL` optionally links it; an empty name hides it.
+- AI prompt overrides are editable at `/settings/prompts` and apply to the next request.
+- `.env` files and `.vercel` configuration are ignored by Git; the committed `.env.example` files contain setup placeholders.
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 Kervens Volcy.
